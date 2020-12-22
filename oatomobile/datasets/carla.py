@@ -181,6 +181,7 @@ class CARLADataset(Dataset):
           "actors_tracker",
       ),
       render: bool = False,
+      agent_fn = AutopilotAgent,
   ) -> None:
     """Collects autopilot demonstrations for a single episode on CARLA.
 
@@ -229,7 +230,7 @@ class CARLADataset(Dataset):
 
     # Run a full episode.
     EnvironmentLoop(
-        agent_fn=AutopilotAgent,
+        agent_fn=agent_fn,
         environment=env,
         render_mode="human" if render else "none",
     ).run()
@@ -242,7 +243,7 @@ class CARLADataset(Dataset):
       past_length: int = 20,
       num_frame_skips: int = 5,
   ) -> None:
-    """Converts a raw dataset to demonstrations for imitation learning.
+    """Converts a raw dataset to demonstrations for imitation learning.  # adds player future and player past (local locations)
 
     Args:
       dataset_dir: The full path to the raw dataset.
@@ -263,7 +264,7 @@ class CARLADataset(Dataset):
       episode = Episode(parent_dir=dataset_dir, token=episode_token)
       # Fetches all `.npz` files from the raw dataset.
       try:
-        sequence = episode.fetch()
+        sequence = episode.fetch()  # list of tokens for frames in order fetched from metadata
       except FileNotFoundError:
         continue
 

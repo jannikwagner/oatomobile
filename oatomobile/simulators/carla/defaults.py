@@ -19,6 +19,19 @@ import os
 
 # CARLA simulator frames per second (FPS).
 SIMULATOR_FPS = 20
+# Default PID controllers configuration.
+LATERAL_PID_CONTROLLER_CONFIG = {
+    'K_P': 1.95,
+    'K_D': 0.01,
+    'K_I': 1.4,
+    'dt': 1.0 / SIMULATOR_FPS,
+}
+LONGITUDINAL_PID_CONTROLLER_CONFIG = {
+    'K_P': 1.0,
+    'K_D': 0,
+    'K_I': 1.0,
+    'dt': 1.0 / SIMULATOR_FPS,
+}
 
 # The front RGB camera configuration.
 FRONT_CAMERA_RGB_SENSOR_CONFIG = {

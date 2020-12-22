@@ -156,3 +156,5 @@ data
 
 # Configurations.
 Makefile
+data/
+models/
