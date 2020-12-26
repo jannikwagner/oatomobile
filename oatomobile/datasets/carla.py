@@ -181,7 +181,8 @@ class CARLADataset(Dataset):
           "actors_tracker",
       ),
       render: bool = False,
-      agent_fn = AutopilotAgent,
+      agent_fn = None,
+      weather = None,
   ) -> None:
     """Collects autopilot demonstrations for a single episode on CARLA.
 
@@ -203,6 +204,7 @@ class CARLADataset(Dataset):
       render: If True it spawn the `PyGame` display.
     """
     from oatomobile.baselines.rulebased.autopilot.agent import AutopilotAgent
+    agent_fn = AutopilotAgent if agent_fn is None else agent_fn
     from oatomobile.core.loop import EnvironmentLoop
     from oatomobile.core.rl import FiniteHorizonWrapper
     from oatomobile.core.rl import SaveToDiskWrapper
@@ -220,6 +222,7 @@ class CARLADataset(Dataset):
         destination=destination,
         num_vehicles=num_vehicles,
         num_pedestrians=num_pedestrians,
+        weather=weather,
     )
     # Terminates episode if a collision occurs.
     env = TerminateOnCollisionWrapper(env)

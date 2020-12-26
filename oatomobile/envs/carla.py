@@ -48,7 +48,8 @@ class CARLAEnv(Env):
       fps: int = defaults.SIMULATOR_FPS,
       sensors: Sequence[str] = defaults.CARLA_SENSORS,
       num_vehicles: int = 0,
-      num_pedestrians: int = 0) -> None:
+      num_pedestrians: int = 0,
+      weather = None) -> None:
     """Constructs a CARLA simulator-based OpenAI gym-compatible environment.
 
     Args:
@@ -91,7 +92,9 @@ class CARLAEnv(Env):
         destination=destination,
         num_vehicles=num_vehicles,
         num_pedestrians=num_pedestrians,
+        weather=weather,
     )
+    self._weather = weather
 
   @property
   def action_space(self) -> gym.spaces.Dict:
@@ -131,6 +134,7 @@ class CARLANavEnv(CARLAEnv):
       sensors: Sequence[str] = defaults.CARLA_SENSORS,
       num_vehicles: int = 0,
       num_pedestrians: int = 0,
+      weather = None,
       proximity_destination_threshold: float = 7.5) -> None:
     """Constructs a CARLA simulator-based OpenAI gym-compatible environment.
 
@@ -159,6 +163,7 @@ class CARLANavEnv(CARLAEnv):
         sensors=sensors,
         num_vehicles=num_vehicles,
         num_pedestrians=num_pedestrians,
+        weather=weather
     )
     # Internalize hyperparameters.
     self._proximity_destination_threshold = proximity_destination_threshold

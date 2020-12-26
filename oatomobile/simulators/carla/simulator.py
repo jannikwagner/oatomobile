@@ -1604,6 +1604,7 @@ class CARLASimulator(simulator.Simulator):
       destination: Optional[Union[int, carla.Location]] = None,  # pylint: disable=no-member
       num_vehicles: int = 0,
       num_pedestrians: int = 0,
+      weather = None,
       fps: int = defaults.SIMULATOR_FPS,
       client_timeout: float = defaults.CARLA_CLIENT_TIMEOUT,
   ) -> None:
@@ -1633,6 +1634,7 @@ class CARLASimulator(simulator.Simulator):
     self._client_timeout = client_timeout
     self._num_vehicles = num_vehicles
     self._num_pedestrians = num_pedestrians
+    self._weather = weather
 
     # CARLA objects (lazy initialization).
     self._client = None
@@ -1713,6 +1715,7 @@ class CARLASimulator(simulator.Simulator):
         town=self._town,
         fps=self._fps,
         client_timeout=self._client_timeout,
+        weather=self._weather
     )
     self._frame0 = int(self._frame)
     self._dt = self._world.get_settings().fixed_delta_seconds

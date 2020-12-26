@@ -5,6 +5,7 @@ import random
 import tqdm
 import imageio
 import glob
+import torch
 os.environ["CARLA_ROOT"]="/home/jannik_wagner/carla/"
 #os.environ["CARLA_ROOT"]="/home/jannik/carla/"
 
@@ -13,15 +14,37 @@ import oatomobile.envs
 from oatomobile.datasets.carla import CARLADataset
 import oatomobile.baselines.torch.dim.train as train
 from oatomobile.core.dataset import Episode
+from oatomobile.baselines.rulebased.autopilot.agent import AutopilotAgent
+from oatomobile.torch.networks.perception import MobileNetV2
+from oatomobile.baselines.torch.dim.model import ImitativeModel
+from oatomobile.baselines.torch.dim.agent import DIMAgent
+import carla
+import itertools
 
 
+WEATHERS = (
+    carla.WeatherParameters.ClearNoon,
+    carla.WeatherParameters.ClearSunset,
+    carla.WeatherParameters.CloudyNoon,
+    carla.WeatherParameters.CloudySunset,
+    carla.WeatherParameters.Default,
+    carla.WeatherParameters.HardRainNoon,
+    carla.WeatherParameters.HardRainSunset,
+    carla.WeatherParameters.MidRainSunset,
+    carla.WeatherParameters.MidRainyNoon,
+    carla.WeatherParameters.SoftRainNoon,
+    carla.WeatherParameters.SoftRainSunset,
+    carla.WeatherParameters.WetCloudyNoon,
+    carla.WeatherParameters.WetCloudySunset,
+    carla.WeatherParameters.WetNoon,
+    carla.WeatherParameters.WetSunset
+)
 PATH = os.path.join(os.getcwd())
 DATA_PATH = os.path.join(PATH, "data")
 MODELS_PATH = os.path.join(PATH, "models")
 
 
-def fun():
-    sensors = (
+def fun(sensors=(
         "acceleration",
         "velocity",
         "lidar",
@@ -34,8 +57,10 @@ def fun():
         "right_camera_rgb",
         "bird_view_camera_rgb",
         "bird_view_camera_cityscapes",
-    )
-    CARLADataset.collect("Town01", os.path.join(DATA_PATH, "rgb"), 100, 100, 1000, None, None, sensors)
+        ),
+        agent_fn=AutopilotAgent):
+    
+    CARLADataset.collect("Town01", os.path.join(DATA_PATH, "dim"), 100, 100, 1000, None, None, sensors, False, agent_fn)
 
 
 def save_imgs():
@@ -142,5 +167,45 @@ def imgs_to_gif(inpath, outfile, prefix, start=0, end=None):
 #    imgs_to_gif(os.path.join(DATA_PATH, "visualization", "rgb", "front_camera_rgb"), os.path.join(DATA_PATH, "visualization", "rgb", "front_camera_rgb.gif"), "front_camera_rgb", 100, 400)
 
 
+def getDIM(path=os.path.join(MODELS_PATH, "dim", "9", "ckpts", "model-96.pt")):
+    model = ImitativeModel()
+    x = torch.load(path)
+    model.load_state_dict(x)
+    return model
+
+
+def get_agent_fn(model):
+    def agent_fn(environment):
+        return DIMAgent(environment, model=model)
+    return agent_fn
+
+
+def generate_distributions():
+    sensors=(
+        "acceleration",
+        "velocity",
+        "lidar",
+        "is_at_traffic_light",
+        "traffic_light_state",
+        "actors_tracker",
+        "front_camera_rgb",
+        "rear_camera_rgb",
+        "bird_view_camera_rgb",
+    )
+    agent_fn=AutopilotAgent
+    n_frames = 5000
+    n_episodes = 5
+    weathers = ("HardRainNoon", "ClearNoon")
+    n_ped_cars = (0, 1000)
+    towns = ("Town01", "Town02")
+    for weather, n, town, i in itertools.product(weathers, n_ped_cars, towns, range(n_episodes)):
+        CARLADataset.collect(town, os.path.join(DATA_PATH, "dists", town+weather+str(n)), n, n, n_frames, None, None, sensors, False, agent_fn, carla.WeatherParameters.__dict__[weather])
+
+
+
 if __name__=="__main__":
-    pass
+    if False:
+        model = getDIM().eval()
+        fun(agent_fn=get_agent_fn(model))
+    else:
+        generate_distributions()

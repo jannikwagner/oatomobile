@@ -47,6 +47,7 @@ def setup(
     server_timestop: float = 20.0,
     client_timeout: float = 20.0,
     num_max_restarts: int = 5,
+    weather = None,
 ) -> Tuple[carla.Client, carla.World, int, subprocess.Popen]:  # pylint: disable=no-member
   """Returns the `CARLA` `server`, `client` and `world`.
 
@@ -103,7 +104,9 @@ def setup(
       client.set_timeout(client_timeout)
       client.load_world(map_name=town)
       world = client.get_world()
-      world.set_weather(carla.WeatherParameters.ClearNoon)  # pylint: disable=no-member
+      if weather is None:
+        weather = carla.WeatherParameters.ClearNoon
+      world.set_weather(weather)  # pylint: disable=no-member
       frame = world.apply_settings(
           carla.WorldSettings(  # pylint: disable=no-member
               no_rendering_mode=False,
