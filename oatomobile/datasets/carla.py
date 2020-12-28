@@ -245,6 +245,7 @@ class CARLADataset(Dataset):
       future_length: int = 80,
       past_length: int = 20,
       num_frame_skips: int = 5,
+      ordered = True
   ) -> None:
     """Converts a raw dataset to demonstrations for imitation learning.  # adds player future and player past (local locations)
 
@@ -258,7 +259,13 @@ class CARLADataset(Dataset):
     from oatomobile.utils import carla as cutil
 
     # Creates the necessary output directory.
-    os.makedirs(output_dir, exist_ok=True)
+    if ordered:
+      if output_dir[-1] == "/":
+        output_dir = output_dir[:-1]
+      parent_dir, token = os.path.split(output_dir)
+      output_episode = Episode(parent_dir, token)
+    else:
+      os.makedirs(output_dir, exist_ok=True)
 
     # Iterate over all episodes.
     for episode_token in tqdm.tqdm(os.listdir(dataset_dir)):
@@ -317,12 +324,17 @@ class CARLADataset(Dataset):
           )
 
           # Store to ouput directory.
-          np.savez_compressed(
-              os.path.join(output_dir, "{}.npz".format(sequence[i])),
-              **observation,
+          if ordered:
+            output_episode.append(**observation,
               player_future=player_future,
-              player_past=player_past,
-          )
+              player_past=player_past,)
+          else:
+            np.savez_compressed(
+                os.path.join(output_dir, "{}.npz".format(sequence[i])),
+                **observation,
+                player_future=player_future,
+                player_past=player_past,
+            )
 
         except Exception as e:
           if isinstance(e, KeyboardInterrupt):
@@ -661,7 +673,22 @@ class CARLADataset(Dataset):
         """
         # Internalise hyperparameters.
         self._modalities = modalities
-        self._npz_files = glob.glob(os.path.join(dataset_dir, "*.npz"))
+        listdir = os.listdir(dataset_dir)
+        listdir = [os.path.join(dataset_dir, x) for x in listdir]
+        if all([os.path.isdir(x) for x in listdir]):  # several folders -> recursive
+          datasets = [PyTorchDataset(x, modalities, transform, mode) for x in listdir]
+          filelists = [x._npz_files for x in datasets]
+          files = []
+          for npz_files in filelists:
+            files.extend(npz_files)
+          self._npz_files = files
+        elif "metadata" in listdir:  # ordered dataset
+          with open(os.path.join(dataset_dir, "metadata")) as metadata:
+            samples = metadata.read()
+          samples = list(filter(None, samples.split("\n")))
+          self._npz_files = [os.path.join(dataset_dir, token+".npz") for token in samples]
+        else:  # unordered dataset
+          self._npz_files = glob.glob(os.path.join(dataset_dir, "*.npz"))
         self._transform = transform
         self._mode = mode
 
