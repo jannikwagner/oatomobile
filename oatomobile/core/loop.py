@@ -104,8 +104,13 @@ class EnvironmentLoop:
     finally:
       # Garbage collector.
       try:
-        environment.close()
+        logging.debug("Try to close Env in loop.")
+        # self._environment.close()
+        uw = self._environment.unwrapped
+        uw.close()
+        logging.debug("Closed Env in loop.")
       except NameError:
+        logging.debug("Closing environment failed in loop.")
         pass
 
       # Returns the recorded metrics.

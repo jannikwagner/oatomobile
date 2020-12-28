@@ -108,19 +108,20 @@ def visualize():
         CARLADataset.plot_datum(file, out)
 
 
-def visualize_raw_lidar(path=None):
+def visualize_raw_lidar(path=None, outpath=None, start=None, end=None, step=None):
     if path is None:
         path = os.path.join(DATA_PATH, "rgb")
         path = os.path.join(path, random.choice(os.listdir(path)))
-
-    output_dir1 = os.path.join(DATA_PATH, "visualization", "rgb", "lidar1")
-    output_dir2 = os.path.join(DATA_PATH, "visualization", "rgb", "lidar2")
+    if outpath is None:
+        outpath = os.path.join(DATA_PATH, "visualization", "rgb")
+    output_dir1 = os.path.join(outpath, "lidar1")
+    output_dir2 = os.path.join(outpath, "lidar2")
     os.makedirs(output_dir1, exist_ok=True)
     os.makedirs(output_dir2, exist_ok=True)
-    output_dir = os.path.join(DATA_PATH, "visualization", "rgb", "lidar")
+    output_dir = os.path.join(outpath, "lidar")
     os.makedirs(output_dir, exist_ok=True)
     with open(os.path.join(path, "metadata")) as metadata:
-        for i, line in enumerate(tqdm.tqdm(metadata.readlines())):
+        for i, line in enumerate(tqdm.tqdm(metadata.readlines()[start:end:step])):
             line = line[:-1] + ".npz"
             x = np.load(os.path.join(path, line))
             lidar = x.f.lidar
@@ -131,25 +132,38 @@ def visualize_raw_lidar(path=None):
             plt.imsave(os.path.join(output_dir, "c{i}.png".format(i=i)), img)
 
 
+        # visualize_raw_rgb(path=os.path.join(DATA_PATH, "dists", "Town01HardRainNoon1000"),outpath=os.path.join(DATA_PATH, "vis", "Town01HardRainNoon1000"), end=1000, step=10)
+        # visualize_raw_rgb(path=os.path.join(DATA_PATH, "dists", "Town02HardRainNoon0"),outpath=os.path.join(DATA_PATH, "vis", "Town02HardRainNoon0"), end=1000, step=10)
 def visualize_raw_rgb(sensors=(
         "front_camera_rgb",
         "rear_camera_rgb",
         "left_camera_rgb",
         "right_camera_rgb",
         "bird_view_camera_rgb",
-        "bird_view_camera_cityscapes"), path=os.path.join(DATA_PATH, "rgb"), token=None):
+        "bird_view_camera_cityscapes",
+        "lidar"), path=None, outpath=None, token=None, start=None, end=None, step=None):
+    if path is None:
+        path=os.path.join(DATA_PATH, "rgb")
     if token is None:
         token = random.choice(os.listdir(path))
+    if outpath is None:
+        outpath = os.path.join(DATA_PATH, "visualization", "rgb")
 
-    output_dirs = {sensor: os.path.join(DATA_PATH, "visualization", "rgb", sensor) for sensor in sensors}
+    output_dirs = {sensor: os.path.join(outpath, sensor) for sensor in sensors}
     for output_dir in output_dirs.values():
         os.makedirs(output_dir, exist_ok=True)
     episode = Episode(path, token)
-    for i, line in enumerate(tqdm.tqdm(episode.fetch())):
+    for i, line in enumerate(tqdm.tqdm(episode.fetch()[start:end:step])):
         x = episode.read_sample(line, None)
         for sensor, output_dir in output_dirs.items():
             if sensor in x:
-                plt.imsave(os.path.join(output_dir, "{a}{i}.png".format(a=sensor,i=i)), x[sensor])
+                img = x[sensor]
+                if sensor == "lidar":
+                    img2 = np.zeros(img.shape[:2]+(3,))
+                    img2[:,:,:2] = img
+                    img = img2
+                    pass
+                plt.imsave(os.path.join(output_dir, "{a}{i}.png".format(a=sensor,i=i)), img)
 
 
 
@@ -188,19 +202,20 @@ def generate_distributions():
         "is_at_traffic_light",
         "traffic_light_state",
         "actors_tracker",
-        "front_camera_rgb",
-        "rear_camera_rgb",
-        "bird_view_camera_rgb",
     )
     agent_fn=AutopilotAgent
     n_frames = 5000
-    n_episodes = 5
+    n_episodes = 10
     weathers = ("HardRainNoon", "ClearNoon")
     n_ped_cars = (0, 1000)
     towns = ("Town01", "Town02")
     for weather, n, town, i in itertools.product(weathers, n_ped_cars, towns, range(n_episodes)):
         CARLADataset.collect(town, os.path.join(DATA_PATH, "dists", town+weather+str(n)), n, n, n_frames, None, None, sensors, False, agent_fn, carla.WeatherParameters.__dict__[weather])
 
+
+def test_collect():
+    CARLADataset.collect("Town01", os.path.join(DATA_PATH, "test"), 0, 0, 50, None, None, ("lidar",), False, AutopilotAgent, None)
+    CARLADataset.collect("Town01", os.path.join(DATA_PATH, "test"), 0, 0, 50, None, None, ("lidar",), False, AutopilotAgent, None)
 
 
 if __name__=="__main__":

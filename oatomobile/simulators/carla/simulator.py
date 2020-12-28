@@ -1838,6 +1838,7 @@ class CARLASimulator(simulator.Simulator):
 
   def close(self) -> None:
     """Closes the simulator down and controls connection to CARLA server."""
+    logging.debug("In Simulator close.")
     if self.sensor_suite is not None:
       self.sensor_suite.close()
       self._sensor_suite = None

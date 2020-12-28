@@ -19,6 +19,7 @@ from typing import Any
 from typing import Callable
 from typing import Mapping
 from typing import Tuple
+from absl import logging
 
 import gym
 import imageio
@@ -93,6 +94,7 @@ class Env(gym.Env):
 
   def close(self) -> None:
     """Closes the simulator down and controls connection to CARLA server."""
+    logging.debug("In Env.close()")
     self.simulator.close()
 
 
