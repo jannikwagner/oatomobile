@@ -111,6 +111,8 @@ def main(argv):
   cuda_val_idx = FLAGS.cuda_val_idx
   noise_level = 1e-2
 
+  val = False
+
   # Determines device, accelerator.
   train_device = torch.device("cuda:{}".format(cuda_train_idx) if torch.cuda.is_available() else "cpu")  # pylint: disable=no-member
   val_device = torch.device("cuda:{}".format(cuda_val_idx) if torch.cuda.is_available() else "cpu")  # pylint: disable=no-member
@@ -167,15 +169,16 @@ def main(argv):
       batch_size=batch_size,
       shuffle=True,
   )
-  dataset_val = CARLADataset.as_torch(
-      dataset_dir=os.path.join(dataset_dir, "val"),
-      modalities=modalities,
-  )
-  dataloader_val = torch.utils.data.DataLoader(
-      dataset_val,
-      batch_size=batch_size * 5,
-      shuffle=True,
-  )
+  if val:
+    dataset_val = CARLADataset.as_torch(
+        dataset_dir=os.path.join(dataset_dir, "val"),
+        modalities=modalities,
+    )
+    dataloader_val = torch.utils.data.DataLoader(
+        dataset_val,
+        batch_size=batch_size * 5,
+        shuffle=True,
+    )
 
   # Theoretical limit of NLL.
   nll_limit = -torch.sum(  # pylint: disable=no-member
@@ -325,7 +328,6 @@ def main(argv):
       write(model, dataloader_train, writer, "train", loss_train, epoch)
 
       # Evaluates model on whole validation dataset, and writes on `TensorBoard`.
-      val = False
       if val:
         logging.debug("#"*50+"\neval\n"+"#"*50)
         loss_val = evaluate_epoch(model, dataloader_val)

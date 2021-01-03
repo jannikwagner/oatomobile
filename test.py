@@ -209,7 +209,7 @@ def generate_distributions():
     weathers = ("HardRainNoon", "ClearNoon")
     n_ped_cars = (0, 1000)
     towns = ("Town01", "Town02")
-    skip = 58
+    skip = 0
     for weather, n, town, i in tqdm.tqdm(list(itertools.product(weathers, n_ped_cars, towns, range(n_episodes)))[skip:]):
         CARLADataset.collect(town, os.path.join(DATA_PATH, "dists", town+weather+str(n)), n, n, n_frames, None, None, sensors, False, agent_fn, carla.WeatherParameters.__dict__[weather])
 
@@ -220,7 +220,8 @@ def process_dists(inpath=None, outpath=None):
     if outpath is None:
         outpath = os.path.join(DATA_PATH, "dists", "processed")
     for dist in os.listdir(inpath):
-        CARLADataset.process(os.pah.join(inpath, dist), os.path.join(outpath, dist))
+        if dist != os.path.split(outpath)[-1]:
+            CARLADataset.process(os.path.join(inpath, dist), os.path.join(outpath, dist))
 
 
 def test_collect():
@@ -233,4 +234,7 @@ if __name__=="__main__":
         model = getDIM().eval()
         fun(agent_fn=get_agent_fn(model))
     else:
-        generate_distributions()
+        pass
+
+
+
