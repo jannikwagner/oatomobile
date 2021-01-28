@@ -158,3 +158,6 @@ data
 Makefile
 data/
 models/
+
+# carla
+carla/

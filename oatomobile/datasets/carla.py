@@ -18,7 +18,7 @@ import glob
 import os
 import sys
 import zipfile
-from typing import Any
+from typing import Any, List
 from typing import Callable
 from typing import Generator
 from typing import Mapping
@@ -259,7 +259,7 @@ class CARLADataset(Dataset):
     from oatomobile.utils import carla as cutil
 
     # Creates the necessary output directory.
-    if ordered:
+    if ordered:  # episodes are used to save order in a metadata file
       if output_dir[-1] == "/":
         output_dir = output_dir[:-1]
       parent_dir, token = os.path.split(output_dir)
@@ -673,22 +673,7 @@ class CARLADataset(Dataset):
         """
         # Internalise hyperparameters.
         self._modalities = modalities
-        listdir = os.listdir(dataset_dir)
-        listdir = [os.path.join(dataset_dir, x) for x in listdir]
-        if all([os.path.isdir(x) for x in listdir]):  # several folders -> recursive
-          datasets = [PyTorchDataset(x, modalities, transform, mode) for x in listdir]
-          filelists = [x._npz_files for x in datasets]
-          files = []
-          for npz_files in filelists:
-            files.extend(npz_files)
-          self._npz_files = files
-        elif "metadata" in listdir:  # ordered dataset
-          with open(os.path.join(dataset_dir, "metadata")) as metadata:
-            samples = metadata.read()
-          samples = list(filter(None, samples.split("\n")))
-          self._npz_files = [os.path.join(dataset_dir, token+".npz") for token in samples]
-        else:  # unordered dataset
-          self._npz_files = glob.glob(os.path.join(dataset_dir, "*.npz"))
+        self.npz_files = get_npz_files(dataset_dir)
         self._transform = transform
         self._mode = mode
 
@@ -724,3 +709,138 @@ class CARLADataset(Dataset):
         return sample
 
     return PyTorchDataset(dataset_dir, modalities, transform, mode)
+
+  @classmethod
+  def annotate_with_model(cls,
+      dataset_dir: str,
+      modalities: Sequence[str],
+      model,
+      model_name,
+      transform: Optional[Callable[[Any], Any]] = None,
+      mode: bool = False,):
+    from oatomobile.torch import transforms
+    import torch
+
+    npz_files = get_npz_files(dataset_dir)
+    for npz_file in npz_files:
+      # prepare sample
+      sample = cls.load_datum(
+          fname=npz_file,
+          modalities=modalities,
+          mode=mode,
+          dataformat="CHW",
+      )
+
+      # Filters out non-array keys.
+      for key in list(sample):
+        if not isinstance(sample[key], np.ndarray):
+          sample.pop(key)
+
+      # Applies (optional) transformation to all values.
+      if transform is not None:
+        sample = {key: transform(val) for (key, val) in sample.items()}
+      
+      if "lidar" in sample:
+        sample["visual_features"] = sample.pop("lidar")
+
+
+      # Preprocesses the visual features.
+      if "visual_features" in sample:
+        lidar = torch.from_numpy(sample["visual_features"])
+        lidar = lidar.view(1, *lidar.size())
+        lidar = transforms.transpose_visual_features(
+            transforms.downsample_visual_features(
+                visual_features=lidar,
+                output_shape=(100, 100),
+            ))
+      
+      model_output = model(lidar)[0]
+
+      with np.load(
+         npz_file,
+          allow_pickle=True,
+      ) as npz:
+        observation = dict()
+        for _attr in npz:
+          observation[_attr] = npz[_attr]
+      observation[model_name] = model_output.detach().numpy()
+
+      np.savez_compressed(npz_file,
+          **observation,
+      )
+
+  @classmethod
+  def make_arff(cls,
+      dataset_dir: str,
+      outpath: str,
+      modalities: Sequence[str],
+      relation_name: str,
+      comments: Optional[List[str]] = None,
+      mode: bool = False,
+      recursive=False,
+      dataformat="HWC"):
+    npz_files = get_npz_files(dataset_dir, recursive)
+    with open(outpath, "w") as arff_file:
+      if comments is not None:
+        for comment in comments:
+          arff_file.write("% {}\n".format(comment))
+
+      arff_file.write("@RELATION " + relation_name + "\n")
+
+      observation = cls.load_datum(npz_files[0],modalities,mode,dataformat)
+      for key in modalities:
+        value = observation[key]
+        if isinstance(value, np.ndarray):
+          for i in range(len(value.flat)):
+            arff_file.write("@ATTRIBUTE {}{} NUMERIC\n".format(key, i))
+        elif isinstance(value, int) or isinstance(value, float):
+            arff_file.write("@ATTRIBUTE {} NUMERIC\n".format(key))
+        else:
+          raise NotImplementedError(key, value)
+      
+      for npz_file in npz_files:
+        observation = cls.load_datum(npz_file,modalities,mode,dataformat)
+        line = get_observation_line(observation, observation) + "\n"
+        arff_file.write(line)
+      
+def get_observation_line(observation, modalities, round=10):
+  values = []
+  for key in modalities:
+    value = observation[key]    
+    if isinstance(value, np.ndarray):
+      if round is not False:
+        value = np.round(value,round)
+      for i in range(len(value.flat)):
+        val = str(value.flat[i])
+        values.append(val)
+
+    elif isinstance(value, int) or isinstance(value, float):
+      if round is not False:
+        value = str(np.round(value,round))
+        values.append(value)
+        
+    else:
+      raise NotImplementedError(key, value)
+
+    return ",".join(values)
+
+def get_npz_files(dataset_dir: str, recursive=True):
+  listdir = os.listdir(dataset_dir)
+  listdir = [os.path.join(dataset_dir, x) for x in listdir]
+  npz_files = []
+  if recursive:
+    subdirs = [x for x in listdir if os.path.isdir(x)]
+    datasets = [get_npz_files(x) for x in subdirs]
+    for subdir_files in datasets:
+      npz_files.extend(subdir_files)
+
+  if "metadata" in listdir:  # ordered dataset
+    with open(os.path.join(dataset_dir, "metadata")) as metadata:
+      samples = metadata.read()
+    samples = list(filter(None, samples.split("\n")))
+    npz_files.extend([os.path.join(dataset_dir, token+".npz") for token in samples])
+
+  else:  # unordered dataset (original)
+    npz_files = glob.glob(os.path.join(dataset_dir, "*.npz"), recursive=False)
+  
+  return npz_files

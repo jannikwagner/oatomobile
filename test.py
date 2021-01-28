@@ -6,7 +6,7 @@ import tqdm
 import imageio
 import glob
 import torch
-os.environ["CARLA_ROOT"]="/home/jannik_wagner/carla/"
+os.environ["CARLA_ROOT"]="/home/jannik_wagner/carla" if torch.cuda.is_available() else "carla"
 #os.environ["CARLA_ROOT"]="/home/jannik/carla/"
 
 import oatomobile
@@ -44,7 +44,7 @@ DATA_PATH = os.path.join(PATH, "data")
 MODELS_PATH = os.path.join(PATH, "models")
 
 
-def fun(sensors=(
+def test_data_gen(sensors=(
         "acceleration",
         "velocity",
         "lidar",
@@ -58,25 +58,17 @@ def fun(sensors=(
         "bird_view_camera_rgb",
         "bird_view_camera_cityscapes",
         ),
-        agent_fn=AutopilotAgent):
-    
-    CARLADataset.collect("Town01", os.path.join(DATA_PATH, "dim"), 100, 100, 1000, None, None, sensors, False, agent_fn)
+        agent_fn=AutopilotAgent,
+        path=os.path.join(DATA_PATH, "dim")):
+    """
 
-
-def save_imgs():
-    os.chdir(DATA_PATH)
-    if "imgs" not in os.listdir():
-        os.mkdir("imgs")
-    dir = random.choice(os.listdir())
-    os.chdir(dir)
-    for i, file in  enumerate(os.listdir()):
-        x = np.load(file)
-        lidar = x.f.lidar
-        plt.imsave("../imgs/a{i}.png".format(i=i), lidar[:,:,1])
-        plt.imsave("../imgs/b{i}.png".format(i=i), lidar[:,:,0])
+    """
+    CARLADataset.collect("Town01", path, 100, 100, 1000, None, None, sensors, False, agent_fn)
 
 
 def download():
+    """ download the data from oatomobile
+    """
     raw = CARLADataset("raw")
     examples = CARLADataset("examples")
     processed = CARLADataset("processed")
@@ -166,7 +158,6 @@ def visualize_raw_rgb(sensors=(
                 plt.imsave(os.path.join(output_dir, "{a}{i}.png".format(a=sensor,i=i)), img)
 
 
-
 def imgs_to_gif(inpath, outfile, prefix, start=0, end=None):
     count = len(os.listdir(inpath))
     if end is None:
@@ -214,7 +205,7 @@ def generate_distributions():
         CARLADataset.collect(town, os.path.join(DATA_PATH, "dists", town+weather+str(n)), n, n, n_frames, None, None, sensors, False, agent_fn, carla.WeatherParameters.__dict__[weather])
 
 
-def process_dists(inpath=None, outpath=None):
+def process_distributions(inpath=None, outpath=None):
     if inpath is None:
         inpath = os.path.join(DATA_PATH, "dists")
     if outpath is None:
@@ -230,11 +221,16 @@ def test_collect():
 
 
 if __name__=="__main__":
-    if False:
-        model = getDIM().eval()
-        fun(agent_fn=get_agent_fn(model))
-    else:
-        pass
-
-
-
+    model = ImitativeModel()
+    mobilenet = dict(model.named_children())["_encoder"]
+    # CARLADataset("examples").download_and_prepare(os.path.join(DATA_PATH, "downloaded"))
+    modalities = (
+        "lidar",
+        "is_at_traffic_light",
+        "traffic_light_state",
+        "player_future",
+        "velocity",
+    )
+    CARLADataset.annotate_with_model("data/downloaded/examples/train", modalities, mobilenet, "mobilenet", None)
+    CARLADataset.make_arff("data/downloaded/examples/train", "data/downloaded/examples/train/data.arff",("lidar", "mobilenet"),"oatomobile1",)
+    
