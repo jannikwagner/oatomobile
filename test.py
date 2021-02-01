@@ -223,14 +223,15 @@ def test_collect():
 if __name__=="__main__":
     model = ImitativeModel()
     mobilenet = dict(model.named_children())["_encoder"]
-    # CARLADataset("examples").download_and_prepare(os.path.join(DATA_PATH, "downloaded"))
+    # CARLADataset("processed").download_and_prepare(os.path.join(DATA_PATH, "downloaded"))
     modalities = (
         "lidar",
         "is_at_traffic_light",
         "traffic_light_state",
-        "player_future",
         "velocity",
+        "player_future",
     )
-    CARLADataset.annotate_with_model("data/downloaded/examples/train", modalities, mobilenet, "mobilenet", None)
-    CARLADataset.make_arff("data/downloaded/examples/train", "data/downloaded/examples/train/data.arff",("lidar", "mobilenet"),"oatomobile1",)
+
+    # CARLADataset.annotate_with_model("data/downloaded/examples/train", modalities, mobilenet, "mobilenet", None)
+    CARLADataset.make_arff("data/downloaded/processed/train", "data/downloaded/processed/dummy.arff",modalities,"oatomobile1",num_instances=100)
     

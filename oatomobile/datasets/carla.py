@@ -722,7 +722,7 @@ class CARLADataset(Dataset):
     import torch
 
     npz_files = get_npz_files(dataset_dir)
-    for npz_file in npz_files:
+    for npz_file in tqdm.tqdm(npz_files):
       # prepare sample
       sample = cls.load_datum(
           fname=npz_file,
@@ -742,7 +742,6 @@ class CARLADataset(Dataset):
       
       if "lidar" in sample:
         sample["visual_features"] = sample.pop("lidar")
-
 
       # Preprocesses the visual features.
       if "visual_features" in sample:
@@ -778,7 +777,9 @@ class CARLADataset(Dataset):
       comments: Optional[List[str]] = None,
       mode: bool = False,
       recursive=False,
-      dataformat="HWC"):
+      dataformat="HWC",
+      num_timesteps_to_keep: int = 4,
+      num_instances=None):
     npz_files = get_npz_files(dataset_dir, recursive)
     with open(outpath, "w") as arff_file:
       if comments is not None:
@@ -786,21 +787,28 @@ class CARLADataset(Dataset):
           arff_file.write("% {}\n".format(comment))
 
       arff_file.write("@RELATION " + relation_name + "\n")
-
-      observation = cls.load_datum(npz_files[0],modalities,mode,dataformat)
-      for key in modalities:
-        value = observation[key]
-        if isinstance(value, np.ndarray):
-          for i in range(len(value.flat)):
-            arff_file.write("@ATTRIBUTE {}{} NUMERIC\n".format(key, i))
-        elif isinstance(value, int) or isinstance(value, float):
-            arff_file.write("@ATTRIBUTE {} NUMERIC\n".format(key))
-        else:
-          raise NotImplementedError(key, value)
       
-      for npz_file in npz_files:
+      for i in tqdm.trange(len(npz_files) if num_instances is None else num_instances):
+        npz_file = npz_files[i]
         observation = cls.load_datum(npz_file,modalities,mode,dataformat)
-        line = get_observation_line(observation, observation) + "\n"
+        # transform (maybe use extra function)
+        if "player_future" in observation:
+          T, _ = observation["player_future"].shape
+          increments = T // num_timesteps_to_keep
+          observation["player_future"] = observation["player_future"][0::increments, :]
+
+        if i == 0:  # first iteration -> add metadata about attributes
+          for key in modalities:
+            value = observation[key]
+            if isinstance(value, np.ndarray):
+              for i in range(len(value.flat)):
+                arff_file.write("@ATTRIBUTE {}{} NUMERIC\n".format(key, i))
+            elif isinstance(value, int) or isinstance(value, float):
+                arff_file.write("@ATTRIBUTE {} NUMERIC\n".format(key))
+            else:
+              raise NotImplementedError(key, value)
+      
+        line = get_observation_line(observation, modalities) + "\n"
         arff_file.write(line)
       
 def get_observation_line(observation, modalities, round=10):
