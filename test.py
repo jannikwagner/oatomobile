@@ -44,25 +44,6 @@ DATA_PATH = os.path.join(PATH, "data")
 MODELS_PATH = os.path.join(PATH, "models")
 
 
-def fun(sensors=(
-        "acceleration",
-        "velocity",
-        "lidar",
-        "is_at_traffic_light",
-        "traffic_light_state",
-        "actors_tracker",
-        "front_camera_rgb",
-        "rear_camera_rgb",
-        "left_camera_rgb",
-        "right_camera_rgb",
-        "bird_view_camera_rgb",
-        "bird_view_camera_cityscapes",
-        ),
-        agent_fn=AutopilotAgent):
-    
-    CARLADataset.collect("Town01", os.path.join(DATA_PATH, "dim"), 100, 100, 1000, None, None, sensors, False, agent_fn)
-
-
 def save_imgs():
     os.chdir(DATA_PATH)
     if "imgs" not in os.listdir():
@@ -181,19 +162,6 @@ def imgs_to_gif(inpath, outfile, prefix, start=0, end=None):
 #    imgs_to_gif(os.path.join(DATA_PATH, "visualization", "rgb", "front_camera_rgb"), os.path.join(DATA_PATH, "visualization", "rgb", "front_camera_rgb.gif"), "front_camera_rgb", 100, 400)
 
 
-def getDIM(path=os.path.join(MODELS_PATH, "dim", "9", "ckpts", "model-96.pt")):
-    model = ImitativeModel()
-    x = torch.load(path)
-    model.load_state_dict(x)
-    return model
-
-
-def get_agent_fn(model):
-    def agent_fn(environment):
-        return DIMAgent(environment, model=model)
-    return agent_fn
-
-
 def generate_distributions():
     sensors=(
         "acceleration",
@@ -204,21 +172,22 @@ def generate_distributions():
         "actors_tracker",
     )
     agent_fn=AutopilotAgent
-    n_frames = 5000
-    n_episodes = 10
+    n_frames = 1000
+    n_episodes = 2
     weathers = ("HardRainNoon", "ClearNoon")
     n_ped_cars = (0, 1000)
     towns = ("Town01", "Town02")
     skip = 0
+    path = os.path.join(DATA_PATH, "dists", "raw", "val2")
     for weather, n, town, i in tqdm.tqdm(list(itertools.product(weathers, n_ped_cars, towns, range(n_episodes)))[skip:]):
-        CARLADataset.collect(town, os.path.join(DATA_PATH, "dists", town+weather+str(n)), n, n, n_frames, None, None, sensors, False, agent_fn, carla.WeatherParameters.__dict__[weather])
+        CARLADataset.collect(town, os.path.join(path, town+weather+str(n)), n, n, n_frames, None, None, sensors, False, agent_fn, carla.WeatherParameters.__dict__[weather])
 
 
 def process_dists(inpath=None, outpath=None):
     if inpath is None:
-        inpath = os.path.join(DATA_PATH, "dists")
+        inpath = os.path.join(DATA_PATH, "dists", "raw", "val")
     if outpath is None:
-        outpath = os.path.join(DATA_PATH, "dists", "processed")
+        outpath = os.path.join(DATA_PATH, "dists", "processed","val")
     for dist in os.listdir(inpath):
         if dist != os.path.split(outpath)[-1]:
             CARLADataset.process(os.path.join(inpath, dist), os.path.join(outpath, dist))
@@ -230,11 +199,4 @@ def test_collect():
 
 
 if __name__=="__main__":
-    if False:
-        model = getDIM().eval()
-        fun(agent_fn=get_agent_fn(model))
-    else:
-        pass
-
-
-
+    visualize_raw_rgb(path=os.path.join(DATA_PATH, "dim", ), outpath=os.path.join(DATA_PATH, "vis", "dim"))

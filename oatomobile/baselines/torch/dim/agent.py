@@ -51,11 +51,14 @@ class DIMAgent(SetPointAgent):
         "bird_view_camera_cityscapes"]
     for attr in observation:
       if not isinstance(observation[attr], np.ndarray):
+        if isinstance(observation[attr], dict):
+          observation[attr] = None
         observation[attr] = np.atleast_1d(observation[attr])
       observation[attr] = observation[attr][None, ...].astype(np.float32)
 
     # Makes `goal` 2D.
-    observation["goal"] = observation["goal"][..., :2]
+    if "goal" in observation:
+      observation["goal"] = observation["goal"][..., :2]
     # Convert image to CHW.
     observation["lidar"] = np.transpose(observation["lidar"], (0, 3, 1, 2))
     # Processes observations for the `ImitativeModel`.

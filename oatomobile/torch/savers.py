@@ -42,7 +42,7 @@ class Checkpointer:
   ) -> str:
     """Saves the model to the `ckpt_dir/epoch/model.pt` file."""
     ckpt_path = os.path.join(self._ckpt_dir, "model-{}.pt".format(epoch))
-    torch.save(self._model.state_dict(), ckpt_path)
+    torch.save(self._model.to("cpu").state_dict(), ckpt_path)
     return ckpt_path
 
   def load(

@@ -1,0 +1,3 @@
+[submodule "mideo"]
+	path = mideo
+	url = https://gitlab.rlp.net/zaahmadi/mideo.git

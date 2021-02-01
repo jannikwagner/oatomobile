@@ -47,7 +47,7 @@ flags.DEFINE_string(
 )
 flags.DEFINE_integer(
     name="batch_size",
-    default=512,
+    default=256,
     help="The batch size used for training the neural network.",
 )
 flags.DEFINE_integer(
@@ -82,7 +82,7 @@ flags.DEFINE_bool(
 )
 flags.DEFINE_integer(
     name="cuda_train_idx",
-    default=0,
+    default=2,
     help="The index of the graphics card to be used for training.",
 )
 flags.DEFINE_integer(
@@ -111,7 +111,7 @@ def main(argv):
   cuda_val_idx = FLAGS.cuda_val_idx
   noise_level = 1e-2
 
-  val = False
+  val = True
 
   # Determines device, accelerator.
   train_device = torch.device("cuda:{}".format(cuda_train_idx) if torch.cuda.is_available() else "cpu")  # pylint: disable=no-member
@@ -234,7 +234,9 @@ def main(argv):
       dataloader: torch.utils.data.DataLoader,
   ) -> torch.Tensor:
     """Performs an epoch of gradient descent optimization on `dataloader`."""
+    torch.cuda.empty_cache()
     model.to(train_device).train()
+    torch.cuda.empty_cache()
     loss = 0.0
     with tqdm.tqdm(dataloader) as pbar:
       for batch in pbar:  # gives errors with num_workers > 1
@@ -272,7 +274,9 @@ def main(argv):
       dataloader: torch.utils.data.DataLoader,
   ) -> torch.Tensor:
     """Performs an evaluation of the `model` on the `dataloader."""
+    torch.cuda.empty_cache()
     model.to(val_device).eval()
+    torch.cuda.empty_cache()
     loss = 0.0
     with tqdm.tqdm(dataloader) as pbar:
       for batch in pbar:

@@ -140,6 +140,70 @@ class ImitativeModel(nn.Module):
 
     return y
 
+  def sample(
+      self,
+      goal: Optional[torch.Tensor] = None,
+      **context: torch.Tensor) -> Union[torch.Tensor, Sequence[torch.Tensor]]:
+    """Returns a sample of a local mode from the posterior.
+
+    Args:
+      goal: The locations of the the goals.
+      context: (keyword arguments) The conditioning
+        variables used for the conditional flow.
+
+    Returns:
+      A mode from the posterior, with shape `[D, 2]`.
+    """
+    if not "visual_features" in context:
+      raise ValueError("Missing `visual_features` keyword argument.")
+    batch_size = context["visual_features"].shape[0]
+
+    # Sets initial sample to base distribution's mean.
+    x = self._decoder._base_dist.sample().clone().detach().repeat(
+        batch_size, 1).view(
+            batch_size,
+            *self._output_shape,
+        )
+
+    # The contextual parameters, caches for efficiency.
+    z = self._params(**context)
+
+    y, _ = self._decoder._forward(x=x, z=z)
+
+    return y
+
+  def mean(
+      self,
+      goal: Optional[torch.Tensor] = None,
+      **context: torch.Tensor) -> Union[torch.Tensor, Sequence[torch.Tensor]]:
+    """Returns a sample of a local mode from the posterior.
+
+    Args:
+      goal: The locations of the the goals.
+      context: (keyword arguments) The conditioning
+        variables used for the conditional flow.
+
+    Returns:
+      A mode from the posterior, with shape `[D, 2]`.
+    """
+    if not "visual_features" in context:
+      raise ValueError("Missing `visual_features` keyword argument.")
+    batch_size = context["visual_features"].shape[0]
+
+    # Sets initial sample to base distribution's mean.
+    x = self._decoder._base_dist.mean.clone().detach().repeat(
+        batch_size, 1).view(
+            batch_size,
+            *self._output_shape,
+        )
+
+    # The contextual parameters, caches for efficiency.
+    z = self._params(**context)
+
+    y, _ = self._decoder._forward(x=x, z=z)
+
+    return y
+
   def _goal_likelihood(self, y: torch.Tensor, goal: torch.Tensor,
                        **hyperparams) -> torch.Tensor:
     """Returns the goal-likelihood of a plan `y`, given `goal`.
