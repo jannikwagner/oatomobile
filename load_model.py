@@ -7,8 +7,7 @@ import imageio
 import glob
 import torch
 from typing import Mapping
-os.environ["CARLA_ROOT"]="/home/jannik_wagner/carla/"
-#os.environ["CARLA_ROOT"]="/home/jannik/carla/"
+from defaults import MODELS_PATH, DATA_PATH, device
 
 import oatomobile
 import oatomobile.envs
@@ -21,8 +20,6 @@ from oatomobile.baselines.torch.dim.model import ImitativeModel
 from oatomobile.baselines.torch.dim.agent import DIMAgent
 import carla
 import itertools
-from test import MODELS_PATH, DATA_PATH
-device=torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 
 def getDIM(path=None, output_shape=(4,2), device=device):

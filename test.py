@@ -6,8 +6,7 @@ import tqdm
 import imageio
 import glob
 import torch
-os.environ["CARLA_ROOT"]="/home/jannik_wagner/carla" if torch.cuda.is_available() else "carla"
-#os.environ["CARLA_ROOT"]="/home/jannik/carla/"
+from defaults import WEATHERS, PATH, DATA_PATH, MODELS_PATH
 
 import oatomobile
 import oatomobile.envs
@@ -21,28 +20,7 @@ from oatomobile.baselines.torch.dim.agent import DIMAgent
 import carla
 import itertools
 
-
-WEATHERS = (
-    carla.WeatherParameters.ClearNoon,
-    carla.WeatherParameters.ClearSunset,
-    carla.WeatherParameters.CloudyNoon,
-    carla.WeatherParameters.CloudySunset,
-    carla.WeatherParameters.Default,
-    carla.WeatherParameters.HardRainNoon,
-    carla.WeatherParameters.HardRainSunset,
-    carla.WeatherParameters.MidRainSunset,
-    carla.WeatherParameters.MidRainyNoon,
-    carla.WeatherParameters.SoftRainNoon,
-    carla.WeatherParameters.SoftRainSunset,
-    carla.WeatherParameters.WetCloudyNoon,
-    carla.WeatherParameters.WetCloudySunset,
-    carla.WeatherParameters.WetNoon,
-    carla.WeatherParameters.WetSunset
-)
-PATH = os.path.join(os.getcwd())
-DATA_PATH = os.path.join(PATH, "data")
-MODELS_PATH = os.path.join(PATH, "models")
-
+from load_model import getDIM
 
 def save_imgs():
     os.chdir(DATA_PATH)
@@ -221,9 +199,9 @@ def test_collect():
 
 
 if __name__=="__main__":
-    model = ImitativeModel()
+    model_path = os.path.join(MODELS_PATH, "dim", "dists2", "ckpts", "model-200.pt")
+    model = getDIM(model_path)
     mobilenet = dict(model.named_children())["_encoder"]
-    # CARLADataset("examples").download_and_prepare(os.path.join(DATA_PATH, "downloaded"))
     modalities = (
         "lidar",
         "is_at_traffic_light",
@@ -231,6 +209,7 @@ if __name__=="__main__":
         "player_future",
         "velocity",
     )
-    CARLADataset.annotate_with_model("data/downloaded/examples/train", modalities, mobilenet, "mobilenet", None)
-    CARLADataset.make_arff("data/downloaded/examples/train", "data/downloaded/examples/train/data.arff",("lidar", "mobilenet"),"oatomobile1",)
+    CARLADataset.annotate_with_model("data/dists/prcoessed/train", modalities, mobilenet, "mobilenet", None)
+    print("annotated "+"#"*100+"\n\n")
+    CARLADataset.make_arff("data/dists/processed/train", "data/dists/processed/train.arff",("mobilenet", ),"mobilenet",recursive=True)
     
