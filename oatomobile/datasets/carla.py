@@ -717,12 +717,13 @@ class CARLADataset(Dataset):
       model,
       model_name,
       transform: Optional[Callable[[Any], Any]] = None,
-      mode: bool = False,):
+      mode: bool = False,
+      num_instances=None):
     from oatomobile.torch import transforms
     import torch
 
     npz_files = get_npz_files(dataset_dir)
-    for npz_file in tqdm.tqdm(npz_files):
+    for npz_file in tqdm.tqdm(npz_files[:num_instances]):
       # prepare sample
       sample = cls.load_datum(
           fname=npz_file,
@@ -788,8 +789,7 @@ class CARLADataset(Dataset):
 
       arff_file.write("@RELATION " + relation_name + "\n")
       
-      for i in tqdm.trange(len(npz_files) if num_instances is None else num_instances):
-        npz_file = npz_files[i]
+      for i, npz_file in enumerate(tqdm.tqdm(npz_files[:num_instances])):
         observation = cls.load_datum(npz_file,modalities,mode,dataformat)
         # transform (maybe use extra function)
         if "player_future" in observation:
@@ -807,6 +807,7 @@ class CARLADataset(Dataset):
                 arff_file.write("@ATTRIBUTE {} NUMERIC\n".format(key))
             else:
               raise NotImplementedError(key, value)
+          arff_file.write("\n@DATA\n")
       
         line = get_observation_line(observation, modalities) + "\n"
         arff_file.write(line)
@@ -833,8 +834,8 @@ def get_observation_line(observation, modalities, round=10):
     return ",".join(values)
 
 def get_npz_files(dataset_dir: str, recursive=True):
-  listdir = os.listdir(dataset_dir)
-  listdir = [os.path.join(dataset_dir, x) for x in listdir]
+  original_listdir = os.listdir(dataset_dir)
+  listdir = [os.path.join(dataset_dir, x) for x in original_listdir]
   npz_files = []
   if recursive:
     subdirs = [x for x in listdir if os.path.isdir(x)]
@@ -842,13 +843,13 @@ def get_npz_files(dataset_dir: str, recursive=True):
     for subdir_files in datasets:
       npz_files.extend(subdir_files)
 
-  if "metadata" in listdir:  # ordered dataset
+  if "metadata" in original_listdir:  # ordered dataset
     with open(os.path.join(dataset_dir, "metadata")) as metadata:
       samples = metadata.read()
     samples = list(filter(None, samples.split("\n")))
     npz_files.extend([os.path.join(dataset_dir, token+".npz") for token in samples])
 
   else:  # unordered dataset (original)
-    npz_files = glob.glob(os.path.join(dataset_dir, "*.npz"), recursive=False)
+    npz_files.extend(glob.glob(os.path.join(dataset_dir, "*.npz"), recursive=False))
   
   return npz_files

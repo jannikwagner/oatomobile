@@ -11,7 +11,7 @@ os.environ["CARLA_ROOT"]="/home/jannik_wagner/carla" if torch.cuda.is_available(
 
 import oatomobile
 import oatomobile.envs
-from oatomobile.datasets.carla import CARLADataset
+from oatomobile.datasets.carla import CARLADataset, get_npz_files
 import oatomobile.baselines.torch.dim.train as train
 from oatomobile.core.dataset import Episode
 from oatomobile.baselines.rulebased.autopilot.agent import AutopilotAgent
@@ -221,17 +221,18 @@ def test_collect():
 
 
 if __name__=="__main__":
-    model = ImitativeModel()
-    mobilenet = dict(model.named_children())["_encoder"]
-    # CARLADataset("processed").download_and_prepare(os.path.join(DATA_PATH, "downloaded"))
-    modalities = (
-        "lidar",
-        "is_at_traffic_light",
-        "traffic_light_state",
-        "velocity",
-        "player_future",
-    )
+    if True:
+        model = ImitativeModel()
+        mobilenet = dict(model.named_children())["_encoder"]
+        # CARLADataset("processed").download_and_prepare(os.path.join(DATA_PATH, "downloaded"))
+        modalities = (
+            "lidar",
+            "is_at_traffic_light",
+            "traffic_light_state",
+            "velocity",
+            "player_future",
+        )
 
-    # CARLADataset.annotate_with_model("data/downloaded/examples/train", modalities, mobilenet, "mobilenet", None)
-    CARLADataset.make_arff("data/downloaded/processed/train", "data/downloaded/processed/dummy.arff",modalities,"oatomobile1",num_instances=100)
-    
+        # CARLADataset.annotate_with_model("data/downloaded/processed/train", modalities, mobilenet, "mobilenet", None, num_instances=100)
+        CARLADataset.make_arff("data/downloaded/processed/train", "data/downloaded/processed/dummy.arff",("mobilenet",),"oatomobile1",num_instances=100)
+    print(get_npz_files("data/npz_est"))
