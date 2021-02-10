@@ -10,7 +10,7 @@ from defaults import WEATHERS, PATH, DATA_PATH, MODELS_PATH
 
 import oatomobile
 import oatomobile.envs
-from oatomobile.datasets.carla import CARLADataset
+from oatomobile.datasets.carla import CARLADataset, get_npz_files
 import oatomobile.baselines.torch.dim.train as train
 from oatomobile.core.dataset import Episode
 from oatomobile.baselines.rulebased.autopilot.agent import AutopilotAgent

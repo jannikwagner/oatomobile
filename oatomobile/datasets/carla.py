@@ -718,12 +718,14 @@ class CARLADataset(Dataset):
       model,
       model_name,
       transform: Optional[Callable[[Any], Any]] = None,
-      mode: bool = False,):
+      mode: bool = False,
+      start=None,
+      end=None):
     from oatomobile.torch import transforms
     import torch
 
     npz_files = get_npz_files(dataset_dir)
-    for npz_file in tqdm.tqdm(npz_files[6621:]):
+    for npz_file in tqdm.tqdm(npz_files[start:end]):
       # prepare sample
       sample = cls.load_datum(
           fname=npz_file,
@@ -743,7 +745,6 @@ class CARLADataset(Dataset):
       
       if "lidar" in sample:
         sample["visual_features"] = sample.pop("lidar")
-
 
       # Preprocesses the visual features.
       if "visual_features" in sample:
@@ -781,7 +782,8 @@ class CARLADataset(Dataset):
       mode: bool = False,
       recursive=False,
       dataformat="HWC",
-      num=None):
+      num_timesteps_to_keep: int = 4,
+      num_instances=None):
     npz_files = get_npz_files(dataset_dir, recursive)
     with open(outpath, "w") as arff_file:
       if comments is not None:
@@ -789,23 +791,28 @@ class CARLADataset(Dataset):
           arff_file.write("% {}\n".format(comment))
 
       arff_file.write("@RELATION " + relation_name + "\n")
-
-      observation = cls.load_datum(npz_files[0],modalities,mode,dataformat)
-      for key in modalities:
-        value = observation[key]
-        if isinstance(value, np.ndarray):
-          for i in range(len(value.flat)):
-            arff_file.write("@ATTRIBUTE {}{} NUMERIC\n".format(key, i))
-        elif isinstance(value, int) or isinstance(value, float):
-            arff_file.write("@ATTRIBUTE {} NUMERIC\n".format(key))
-        else:
-          raise NotImplementedError(key, value)
       
-      arff_file.write("@data\n")
-      
-      for npz_file in tqdm.tqdm(npz_files[:num]):
+      for i, npz_file in enumerate(tqdm.tqdm(npz_files[:num_instances])):
         observation = cls.load_datum(npz_file,modalities,mode,dataformat)
-        line = get_observation_line(observation, observation) + "\n"
+        # transform (maybe use extra function)
+        if "player_future" in observation:
+          T, _ = observation["player_future"].shape
+          increments = T // num_timesteps_to_keep
+          observation["player_future"] = observation["player_future"][0::increments, :]
+
+        if i == 0:  # first iteration -> add metadata about attributes
+          for key in modalities:
+            value = observation[key]
+            if isinstance(value, np.ndarray):
+              for i in range(len(value.flat)):
+                arff_file.write("@ATTRIBUTE {}{} NUMERIC\n".format(key, i))
+            elif isinstance(value, int) or isinstance(value, float):
+                arff_file.write("@ATTRIBUTE {} NUMERIC\n".format(key))
+            else:
+              raise NotImplementedError(key, value)
+          arff_file.write("\n@DATA\n")
+      
+        line = get_observation_line(observation, modalities) + "\n"
         arff_file.write(line)
       
 def get_observation_line(observation, modalities, round=10):
@@ -830,17 +837,17 @@ def get_observation_line(observation, modalities, round=10):
     return ",".join(values)
 
 def get_npz_files(dataset_dir: str, recursive=True):
-  paths = os.listdir(dataset_dir)
-  full_paths = [os.path.join(dataset_dir, x) for x in paths]
+  local_listdir = os.listdir(dataset_dir)
+  global_listdir = [os.path.join(dataset_dir, x) for x in local_listdir]
   npz_files = []
   if recursive:
     # look at contained folders
-    subdirs = [x for x in full_paths if os.path.isdir(x)]
+    subdirs = [x for x in global_listdir if os.path.isdir(x)]
     datasets = [get_npz_files(x, recursive) for x in subdirs]  # recursive access
     for subdir_files in datasets:
       npz_files.extend(subdir_files)
 
-  if "metadata" in paths:  # ordered dataset
+  if "metadata" in local_listdir:  # ordered dataset
     with open(os.path.join(dataset_dir, "metadata")) as metadata:
       samples = metadata.read()
     samples = list(filter(None, samples.split("\n")))
