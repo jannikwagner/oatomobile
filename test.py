@@ -199,17 +199,19 @@ def test_collect():
 
 
 if __name__=="__main__":
-    model_path = os.path.join(MODELS_PATH, "dim", "dists2", "ckpts", "model-200.pt")
-    model = getDIM(model_path)
-    mobilenet = dict(model.named_children())["_encoder"]
-    modalities = (
-        "lidar",
-        "is_at_traffic_light",
-        "traffic_light_state",
-        "player_future",
-        "velocity",
-    )
-    CARLADataset.annotate_with_model("data/dists/prcoessed/train", modalities, mobilenet, "mobilenet", None)
-    print("annotated "+"#"*100+"\n\n")
-    CARLADataset.make_arff("data/dists/processed/train", "data/dists/processed/train.arff",("mobilenet", ),"mobilenet",recursive=True)
+    if True:
+        # model_path = os.path.join(MODELS_PATH, "dim", "dists2", "ckpts", "model-200.pt")
+        # model = getDIM(model_path)
+        # mobilenet = dict(model.named_children())["_encoder"]
+        modalities = (
+            "lidar",
+            "is_at_traffic_light",
+            "traffic_light_state",
+            "player_future",
+            "velocity",
+        )
+        #CARLADataset.annotate_with_model(os.path.join(DATA_PATH, "dists","processed","train"), modalities, mobilenet, "mobilenet", None)
+        print("annotated "+"#"*100+"\n\n")
+        CARLADataset.make_arff(os.path.join(DATA_PATH, "dists","processed","train"), os.path.join(DATA_PATH, "dists","processed","dummy.arff"),("mobilenet", ),"mobilenet",recursive=True, num=100)
+    #visualize_raw_rgb(("lidar",), os.path.join(DATA_PATH,"dists","processed","train"), os.path.join(DATA_PATH, "lolol"),)
     

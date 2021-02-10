@@ -34,6 +34,7 @@ from absl import logging
 
 from oatomobile.core.dataset import Dataset
 from oatomobile.core.dataset import Episode
+from defaults import device
 
 
 class CARLADataset(Dataset):
@@ -722,7 +723,7 @@ class CARLADataset(Dataset):
     import torch
 
     npz_files = get_npz_files(dataset_dir)
-    for npz_file in npz_files:
+    for npz_file in tqdm.tqdm(npz_files[6621:]):
       # prepare sample
       sample = cls.load_datum(
           fname=npz_file,
@@ -747,6 +748,7 @@ class CARLADataset(Dataset):
       # Preprocesses the visual features.
       if "visual_features" in sample:
         lidar = torch.from_numpy(sample["visual_features"])
+        lidar = lidar.to(device=device)
         lidar = lidar.view(1, *lidar.size())
         lidar = transforms.transpose_visual_features(
             transforms.downsample_visual_features(
@@ -763,7 +765,7 @@ class CARLADataset(Dataset):
         observation = dict()
         for _attr in npz:
           observation[_attr] = npz[_attr]
-      observation[model_name] = model_output.detach().numpy()
+      observation[model_name] = model_output.detach().cpu().numpy()
 
       np.savez_compressed(npz_file,
           **observation,
@@ -778,7 +780,8 @@ class CARLADataset(Dataset):
       comments: Optional[List[str]] = None,
       mode: bool = False,
       recursive=False,
-      dataformat="HWC"):
+      dataformat="HWC",
+      num=None):
     npz_files = get_npz_files(dataset_dir, recursive)
     with open(outpath, "w") as arff_file:
       if comments is not None:
@@ -798,7 +801,9 @@ class CARLADataset(Dataset):
         else:
           raise NotImplementedError(key, value)
       
-      for npz_file in npz_files:
+      arff_file.write("@data\n")
+      
+      for npz_file in tqdm.tqdm(npz_files[:num]):
         observation = cls.load_datum(npz_file,modalities,mode,dataformat)
         line = get_observation_line(observation, observation) + "\n"
         arff_file.write(line)
@@ -825,22 +830,23 @@ def get_observation_line(observation, modalities, round=10):
     return ",".join(values)
 
 def get_npz_files(dataset_dir: str, recursive=True):
-  listdir = os.listdir(dataset_dir)
-  listdir = [os.path.join(dataset_dir, x) for x in listdir]
+  paths = os.listdir(dataset_dir)
+  full_paths = [os.path.join(dataset_dir, x) for x in paths]
   npz_files = []
   if recursive:
-    subdirs = [x for x in listdir if os.path.isdir(x)]
-    datasets = [get_npz_files(x) for x in subdirs]
+    # look at contained folders
+    subdirs = [x for x in full_paths if os.path.isdir(x)]
+    datasets = [get_npz_files(x, recursive) for x in subdirs]  # recursive access
     for subdir_files in datasets:
       npz_files.extend(subdir_files)
 
-  if "metadata" in listdir:  # ordered dataset
+  if "metadata" in paths:  # ordered dataset
     with open(os.path.join(dataset_dir, "metadata")) as metadata:
       samples = metadata.read()
     samples = list(filter(None, samples.split("\n")))
     npz_files.extend([os.path.join(dataset_dir, token+".npz") for token in samples])
 
   else:  # unordered dataset (original)
-    npz_files = glob.glob(os.path.join(dataset_dir, "*.npz"), recursive=False)
+    npz_files.extend(glob.glob(os.path.join(dataset_dir, "*.npz"), recursive=False))
   
   return npz_files

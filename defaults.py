@@ -1,7 +1,7 @@
 import os
 import torch
 
-device=torch.device("cuda:1") if torch.cuda.is_available() else torch.device("cpu")
+device=torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
 os.environ["CARLA_ROOT"]="/home/jannik_wagner/carla"
 
 import carla
