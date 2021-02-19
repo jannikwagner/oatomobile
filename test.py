@@ -114,8 +114,6 @@ def visualize_raw_lidar(path=None, outpath=None, start=None, end=None, step=None
             plt.imsave(os.path.join(output_dir, "c{i}.png".format(i=i)), img)
 
 
-        # visualize_raw_rgb(path=os.path.join(DATA_PATH, "dists", "Town01HardRainNoon1000"),outpath=os.path.join(DATA_PATH, "vis", "Town01HardRainNoon1000"), end=1000, step=10)
-        # visualize_raw_rgb(path=os.path.join(DATA_PATH, "dists", "Town02HardRainNoon0"),outpath=os.path.join(DATA_PATH, "vis", "Town02HardRainNoon0"), end=1000, step=10)
 def visualize_raw_rgb(sensors=(
         "front_camera_rgb",
         "rear_camera_rgb",
@@ -124,6 +122,10 @@ def visualize_raw_rgb(sensors=(
         "bird_view_camera_rgb",
         "bird_view_camera_cityscapes",
         "lidar"), path=None, outpath=None, token=None, start=None, end=None, step=None):
+    """
+        visualize_raw_rgb(path=os.path.join(DATA_PATH, "dists", "Town01HardRainNoon1000"),outpath=os.path.join(DATA_PATH, "vis", "Town01HardRainNoon1000"), end=1000, step=10)
+        visualize_raw_rgb(path=os.path.join(DATA_PATH, "dists", "Town02HardRainNoon0"),outpath=os.path.join(DATA_PATH, "vis", "Town02HardRainNoon0"), end=1000, step=10)
+    """
     if path is None:
         path=os.path.join(DATA_PATH, "rgb")
     if token is None:
@@ -155,8 +157,11 @@ def imgs_to_gif(inpath, outfile, prefix, start=0, end=None):
     assert start <= end <= count
     images = []
     for i in tqdm.trange(start, end):
-        filename = os.path.join(inpath, "{prefix}{i}.png".format(prefix=prefix,i=i))
-        images.append(imageio.imread(filename))    
+        try:
+            filename = os.path.join(inpath, "{prefix}{i}.png".format(prefix=prefix,i=i))
+            images.append(imageio.imread(filename))  
+        except:
+            break  
     imageio.mimsave(outfile, images)
 #    imgs_to_gif(os.path.join(DATA_PATH, "visualization", "rgb", "lidar"), os.path.join(DATA_PATH, "visualization", "rgb", "lidar.gif"), "c", 100, 200)
 #    imgs_to_gif(os.path.join(DATA_PATH, "visualization", "rgb", "front_camera_rgb"), os.path.join(DATA_PATH, "visualization", "rgb", "front_camera_rgb.gif"), "front_camera_rgb", 100, 400)
@@ -199,19 +204,29 @@ def test_collect():
 
 
 if __name__=="__main__":
-    if True:
-        # model_path = os.path.join(MODELS_PATH, "dim", "dists2", "ckpts", "model-200.pt")
-        # model = getDIM(model_path)
-        # mobilenet = dict(model.named_children())["_encoder"]
-        modalities = (
-            "lidar",
-            "is_at_traffic_light",
-            "traffic_light_state",
-            "player_future",
-            "velocity",
-        )
-        #CARLADataset.annotate_with_model(os.path.join(DATA_PATH, "dists","processed","train"), modalities, mobilenet, "mobilenet", None)
-        print("annotated "+"#"*100+"\n\n")
-        CARLADataset.make_arff(os.path.join(DATA_PATH, "dists","processed","train"), os.path.join(DATA_PATH, "dists","processed","dummy.arff"),("mobilenet", ),"mobilenet",recursive=True, num=100)
-    #visualize_raw_rgb(("lidar",), os.path.join(DATA_PATH,"dists","processed","train"), os.path.join(DATA_PATH, "lolol"),)
+    # model_path = os.path.join(MODELS_PATH, "dim", "dists2", "ckpts", "model-200.pt")
+    # model = getDIM(model_path)
+    # mobilenet = dict(model.named_children())["_encoder"]
+    # modalities = (
+    #     "lidar",
+    #     "is_at_traffic_light",
+    #     "traffic_light_state",
+    #     "player_future",
+    #     "velocity",
+    # )
+    # CARLADataset.annotate_with_model(os.path.join(DATA_PATH, "dists","processed","train"), modalities, mobilenet, "mobilenet", None)
+    # print("annotated "+"#"*100+"\n\n")
+    CARLADataset.make_arff(os.path.join(DATA_PATH, "dists","processed","train"), os.path.join(DATA_PATH, "dists","processed","dummy.arff"),("mobilenet", ),"mobilenet",recursive=True, num_instances=2000)
+    # CARLADataset.make_arff(os.path.join(DATA_PATH, "dists","processed","train"), os.path.join(DATA_PATH, "dists","processed","train2.arff"),("mobilenet", ),"mobilenet",recursive=True)
+    # visualize_raw_rgb(("lidar",), os.path.join(DATA_PATH,"dists","processed","train"), os.path.join(DATA_PATH, "lolol"),)
     
+    # path = os.path.join(DATA_PATH, "dists", "processed", "train")
+    # for dist in os.listdir(path):
+    #     dist_path = os.path.join(path, dist)
+    #     if os.path.isdir(dist_path):
+    #         outpath = os.path.join(DATA_PATH, "dists", "processed", "vis", dist)
+    #         lidarpath = os.path.join(outpath, "lidar")
+    #         visualize_raw_rgb(("lidar",), dist_path, outpath,step=10,token="")
+    #         gif_file = os.path.join(outpath, "lidar.gif")
+    #         imgs_to_gif(lidarpath, gif_file,"lidar")
+

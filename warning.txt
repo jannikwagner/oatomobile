@@ -1,8 +1,0 @@
-WARNING: The script tqdm is installed in '/home/jannik_wagner/.local/bin' which is not on PATH.
-  Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
-  WARNING: The scripts imageio_download_bin and imageio_remove_bin are installed in '/home/jannik_wagner/.local/bin' which is not on PATH.
-  Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
-  WARNING: The script tabulate is installed in '/home/jannik_wagner/.local/bin' which is not on PATH.
-  Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
-  WARNING: The script skivi is installed in '/home/jannik_wagner/.local/bin' which is not on PATH.
-  Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
