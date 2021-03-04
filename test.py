@@ -163,12 +163,27 @@ def imgs_to_gif(inpath, outfile, prefix, start=0, end=None):
         except:
             break  
     imageio.mimsave(outfile, images)
-#    imgs_to_gif(os.path.join(DATA_PATH, "visualization", "rgb", "lidar"), os.path.join(DATA_PATH, "visualization", "rgb", "lidar.gif"), "c", 100, 200)
-#    imgs_to_gif(os.path.join(DATA_PATH, "visualization", "rgb", "front_camera_rgb"), os.path.join(DATA_PATH, "visualization", "rgb", "front_camera_rgb.gif"), "front_camera_rgb", 100, 400)
+# imgs_to_gif(os.path.join(DATA_PATH, "visualization", "rgb", "lidar"), os.path.join(DATA_PATH, "visualization", "rgb", "lidar.gif"), "c", 100, 200)
+# imgs_to_gif(os.path.join(DATA_PATH, "visualization", "rgb", "front_camera_rgb"), os.path.join(DATA_PATH, "visualization", "rgb", "front_camera_rgb.gif"), "front_camera_rgb", 100, 400)
 
 
-def generate_distributions():
-    sensors=(
+def getDIM(path=os.path.join(MODELS_PATH, "dim", "9", "ckpts", "model-96.pt")):
+    model = ImitativeModel()
+    x = torch.load(path)
+    model.load_state_dict(x)
+    return model
+
+
+def get_agent_fn(model):
+    def agent_fn(environment):
+        return DIMAgent(environment, model=model)
+    return agent_fn
+
+
+def generate_distributions(root_path=None):
+    if root_path is None:
+        root_path = os.path.join(DATA_PATH, "dists2", "raw", "train")
+    sensors = (
         "acceleration",
         "velocity",
         "lidar",
@@ -183,9 +198,14 @@ def generate_distributions():
     n_ped_cars = (0, 1000)
     towns = ("Town01", "Town02")
     skip = 0
-    path = os.path.join(DATA_PATH, "dists", "raw", "val2")
     for weather, n, town, i in tqdm.tqdm(list(itertools.product(weathers, n_ped_cars, towns, range(n_episodes)))[skip:]):
-        CARLADataset.collect(town, os.path.join(path, town+weather+str(n)), n, n, n_frames, None, None, sensors, False, agent_fn, carla.WeatherParameters.__dict__[weather])
+        path = os.path.join(root_path, town+weather+str(n))
+        current_dirs = os.listdir(path)
+        while True:
+            CARLADataset.collect(town, path, n, n, n_frames, None, None, sensors, False, agent_fn, carla.WeatherParameters.__dict__[weather])
+            new_dir = [x for x in os.listdir(path) if x not in current_dirs][0]
+            if CARLADataset.car_moving()
+
 
 
 def process_distributions(inpath=None, outpath=None):
@@ -216,7 +236,7 @@ if __name__=="__main__":
     # )
     # CARLADataset.annotate_with_model(os.path.join(DATA_PATH, "dists","processed","train"), modalities, mobilenet, "mobilenet", None)
     # print("annotated "+"#"*100+"\n\n")
-    CARLADataset.make_arff(os.path.join(DATA_PATH, "dists","processed","train"), os.path.join(DATA_PATH, "dists","processed","dummy.arff"),("mobilenet", ),"mobilenet",recursive=True, num_instances=2000)
+    # CARLADataset.make_arff(os.path.join(DATA_PATH, "dists","processed","train"), os.path.join(DATA_PATH, "dists","processed","dummy.arff"),("mobilenet", ),"mobilenet",recursive=True, num_instances=2000)
     # CARLADataset.make_arff(os.path.join(DATA_PATH, "dists","processed","train"), os.path.join(DATA_PATH, "dists","processed","train2.arff"),("mobilenet", ),"mobilenet",recursive=True)
     # visualize_raw_rgb(("lidar",), os.path.join(DATA_PATH,"dists","processed","train"), os.path.join(DATA_PATH, "lolol"),)
     
@@ -230,3 +250,22 @@ if __name__=="__main__":
     #         gif_file = os.path.join(outpath, "lidar.gif")
     #         imgs_to_gif(lidarpath, gif_file,"lidar")
 
+    if False:
+        model = ImitativeModel()
+        mobilenet = dict(model.named_children())["_encoder"]
+        # CARLADataset("processed").download_and_prepare(os.path.join(DATA_PATH, "downloaded"))
+        modalities = (
+            "lidar",
+            "is_at_traffic_light",
+            "traffic_light_state",
+            "velocity",
+            "player_future",
+        )
+
+        # CARLADataset.annotate_with_model("data/downloaded/processed/train", modalities, mobilenet, "mobilenet", None, num_instances=100)
+        CARLADataset.make_arff("data/downloaded/processed/train", "data/downloaded/processed/dummy.arff",("mobilenet",),"oatomobile1",num_instances=100)
+    path = os.path.join(DATA_PATH,"dists","raw", "train")
+    for x in os.listdir(path):
+        final_path = os.path.join(path, x)
+        if os.path.isdir(final_path):
+            print(CARLADataset.car_not_moving_counts())
