@@ -824,7 +824,6 @@ class CARLADataset(Dataset):
       sequence = episode.fetch()  # list of tokens for frames in order fetched from metadata
     except FileNotFoundError:
       raise
-
     old_location = None
     old_rotation = None
     counter = 0
@@ -847,7 +846,46 @@ class CARLADataset(Dataset):
           counter = 0
           old_location = current_location
           old_rotation = current_rotation
+      except:
+        print("Skipped", i)
     return True
+      
+  @classmethod
+  def car_not_moving_counts(cls, dataset_dir: str):
+    if dataset_dir[-1] == "/":
+      dataset_dir = dataset_dir[:-1]
+    dataset_dir, token = os.path.split(dataset_dir)
+    
+    episode = Episode(parent_dir=dataset_dir, token=token)
+    # Fetches all `.npz` files from the raw dataset.
+    try:
+      sequence = episode.fetch()  # list of tokens for frames in order fetched from metadata
+    except FileNotFoundError:
+      raise
+
+    old_location = None
+    old_rotation = None
+    counter = 0
+    counts = []
+    for i in tqdm.trange(
+        len(sequence)
+    ):
+      try:
+        # Player context/observation.
+        observation = episode.read_sample(sample_token=sequence[i])
+        current_location = observation["location"]
+        current_rotation = observation["rotation"]
+        if current_location == old_location and old_rotation == current_rotation:
+          counter += 1
+        else:
+          counter = 0
+          old_location = current_location
+          old_rotation = current_rotation
+        print(i,":",counter)
+        counts.append(counter)
+      except:
+        print("Skipped", i)
+    return counts
       
 def get_observation_line(observation, modalities, round=10):
   values = []

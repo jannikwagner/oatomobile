@@ -185,8 +185,10 @@ def get_agent_fn(model):
     return agent_fn
 
 
-def generate_distributions():
-    sensors=(
+def generate_distributions(root_path=None):
+    if root_path is None:
+        root_path = os.path.join(DATA_PATH, "dists")
+    sensors = (
         "acceleration",
         "velocity",
         "lidar",
@@ -202,7 +204,10 @@ def generate_distributions():
     towns = ("Town01", "Town02")
     skip = 0
     for weather, n, town, i in tqdm.tqdm(list(itertools.product(weathers, n_ped_cars, towns, range(n_episodes)))[skip:]):
-        CARLADataset.collect(town, os.path.join(DATA_PATH, "dists", town+weather+str(n)), n, n, n_frames, None, None, sensors, False, agent_fn, carla.WeatherParameters.__dict__[weather])
+        path = os.path.join(root_path, town+weather+str(n))
+        CARLADataset.collect(town, path, n, n, n_frames, None, None, sensors, False, agent_fn, carla.WeatherParameters.__dict__[weather])
+        CARLADataset.car_not_moving_counts()
+
 
 
 def process_distributions(inpath=None, outpath=None):
@@ -221,7 +226,7 @@ def test_collect():
 
 
 if __name__=="__main__":
-    if True:
+    if False:
         model = ImitativeModel()
         mobilenet = dict(model.named_children())["_encoder"]
         # CARLADataset("processed").download_and_prepare(os.path.join(DATA_PATH, "downloaded"))
@@ -235,4 +240,4 @@ if __name__=="__main__":
 
         # CARLADataset.annotate_with_model("data/downloaded/processed/train", modalities, mobilenet, "mobilenet", None, num_instances=100)
         CARLADataset.make_arff("data/downloaded/processed/train", "data/downloaded/processed/dummy.arff",("mobilenet",),"oatomobile1",num_instances=100)
-    print(get_npz_files("data/npz_est"))
+    print(CARLADataset.car_not_moving_counts(os.path.join(DATA_PATH,"downloaded","raw", "train")))
