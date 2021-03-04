@@ -198,13 +198,18 @@ def generate_distributions(root_path=None):
     n_ped_cars = (0, 1000)
     towns = ("Town01", "Town02")
     skip = 0
-    for weather, n, town, i in tqdm.tqdm(list(itertools.product(weathers, n_ped_cars, towns, range(n_episodes)))[skip:]):
+    until = 1
+    for weather, n, town, i in tqdm.tqdm(list(itertools.product(weathers, n_ped_cars, towns, range(n_episodes)))[skip:until]):
         path = os.path.join(root_path, town+weather+str(n))
         current_dirs = os.listdir(path)
         while True:
             CARLADataset.collect(town, path, n, n, n_frames, None, None, sensors, False, agent_fn, carla.WeatherParameters.__dict__[weather])
-            new_dir = [x for x in os.listdir(path) if x not in current_dirs][0]
-            if CARLADataset.car_moving()
+            new_dir = [x for x in os.listdir(path) if x not in current_dirs][0]  # find out episode token
+            not_moving_counts = CARLADataset.car_moving(os.path.join(path, new_dir))
+            if not_moving_counts[-1] < 0.1 * n_frames and np.sum(not_moving_counts) < 0.5 * n_frames:
+                break
+            import shutil
+            shutil.rmtree(os.path.join(path, new_dir))
 
 
 
@@ -264,8 +269,12 @@ if __name__=="__main__":
 
         # CARLADataset.annotate_with_model("data/downloaded/processed/train", modalities, mobilenet, "mobilenet", None, num_instances=100)
         CARLADataset.make_arff("data/downloaded/processed/train", "data/downloaded/processed/dummy.arff",("mobilenet",),"oatomobile1",num_instances=100)
-    path = os.path.join(DATA_PATH,"dists","raw", "train")
-    for x in os.listdir(path):
-        final_path = os.path.join(path, x)
-        if os.path.isdir(final_path):
-            print(CARLADataset.car_not_moving_counts())
+    
+    # path = os.path.join(DATA_PATH,"dists","raw", "train", "Town02HardRainNoon0")
+    # for x in os.listdir(path):
+    #     final_path = os.path.join(path, x)
+    #     if os.path.isdir(final_path):
+    #         counts = CARLADataset.car_not_moving_counts(final_path)
+    #         print(sum(counts), counts)
+    
+    generate_distributions()

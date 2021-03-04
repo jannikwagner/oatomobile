@@ -816,44 +816,6 @@ class CARLADataset(Dataset):
         arff_file.write(line)
 
   @classmethod
-  def car_moving(cls, dataset_dir: str, max_still: int=100, skip_start: int=50):
-    if dataset_dir[-1] == "/":
-      dataset_dir = dataset_dir[:-1]
-    dataset_dir, token = os.path.split(dataset_dir)
-    
-    episode = Episode(parent_dir=dataset_dir, token=token)
-    # Fetches all `.npz` files from the raw dataset.
-    try:
-      sequence = episode.fetch()  # list of tokens for frames in order fetched from metadata
-    except FileNotFoundError:
-      raise
-    old_location = None
-    old_rotation = None
-    counter = 0
-    assert len(sequence) >= skip_start
-    for i in tqdm.trange(
-        skip_start,
-        len(sequence)
-    ):
-      try:
-        # Player context/observation.
-        observation = episode.read_sample(sample_token=sequence[i])
-        current_location = observation["location"]
-        current_rotation = observation["rotation"]
-        if current_location == old_location and old_rotation == current_rotation:
-          counter += 1
-          print(counter)
-          if counter >= max_still:
-            return False
-        else:
-          counter = 0
-          old_location = current_location
-          old_rotation = current_rotation
-      except:
-        print("Skipped", i)
-    return True
-      
-  @classmethod
   def car_not_moving_counts(cls, dataset_dir: str):
     if dataset_dir[-1] == "/":
       dataset_dir = dataset_dir[:-1]
@@ -866,10 +828,10 @@ class CARLADataset(Dataset):
     except FileNotFoundError:
       raise
 
-    old_location = None
+    old_location = 0
     old_rotation = None
     counter = 0
-    counts = []
+    counts = [0]
     for i in tqdm.trange(
         len(sequence)
     ):
@@ -878,16 +840,19 @@ class CARLADataset(Dataset):
         observation = episode.read_sample(sample_token=sequence[i])
         current_location = observation["location"]
         current_rotation = observation["rotation"]
-        if current_location == old_location and old_rotation == current_rotation:
+        distance = np.sum(np.square(current_location - old_location))
+        #print(old_location, current_location, distance)
+        if distance < 0.0001: #and np.all(old_rotation == current_rotation):
           counter += 1
         else:
+          counts.append(counter)
           counter = 0
           old_location = current_location
           old_rotation = current_rotation
-        print(i,":",counter)
-        counts.append(counter)
-      except:
-        print("Skipped", i)
+        #print(i,":",counter)
+      except Exception as e:
+        print("Skipped", i, e)
+    counts.append(counter)
     return counts
       
 def get_observation_line(observation, modalities, round=10):
