@@ -22,23 +22,6 @@ import carla
 import itertools
 
 
-WEATHERS = (
-    carla.WeatherParameters.ClearNoon,
-    carla.WeatherParameters.ClearSunset,
-    carla.WeatherParameters.CloudyNoon,
-    carla.WeatherParameters.CloudySunset,
-    carla.WeatherParameters.Default,
-    carla.WeatherParameters.HardRainNoon,
-    carla.WeatherParameters.HardRainSunset,
-    carla.WeatherParameters.MidRainSunset,
-    carla.WeatherParameters.MidRainyNoon,
-    carla.WeatherParameters.SoftRainNoon,
-    carla.WeatherParameters.SoftRainSunset,
-    carla.WeatherParameters.WetCloudyNoon,
-    carla.WeatherParameters.WetCloudySunset,
-    carla.WeatherParameters.WetNoon,
-    carla.WeatherParameters.WetSunset
-)
 PATH = os.path.join(os.getcwd())
 DATA_PATH = os.path.join(PATH, "data")
 MODELS_PATH = os.path.join(PATH, "models")
@@ -205,7 +188,7 @@ def generate_distributions(root_path=None):
     skip = 0
     for weather, n, town, i in tqdm.tqdm(list(itertools.product(weathers, n_ped_cars, towns, range(n_episodes)))[skip:]):
         path = os.path.join(root_path, town+weather+str(n))
-        CARLADataset.collect(town, path, n, n, n_frames, None, None, sensors, False, agent_fn, carla.WeatherParameters.__dict__[weather])
+        CARLADataset.collect(town, path, n, n, n_frames, None, None, sensors, False, agent_fn, weather)
         CARLADataset.car_not_moving_counts()
 
 

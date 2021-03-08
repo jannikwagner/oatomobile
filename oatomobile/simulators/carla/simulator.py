@@ -1671,14 +1671,16 @@ class CARLASimulator(simulator.Simulator):
     """Returns a reference to the spawn point."""
     if self._world is None:
       raise ValueError("Make sure the environment is reset first.")
-    return cutil.get_spawn_point(self._world, self._spawn_point)
+    self._spawn_point = cutil.get_spawn_point(self._world, self._spawn_point)
+    return self._spawn_point
 
   @property
   def destination(self) -> carla.Waypoint:  # pylint: disable=no-member
     """Returns a reference to the destination."""
     if self._world is None:
       raise ValueError("Make sure the environment is reset first.")
-    return cutil.get_spawn_point(self._world, self._destination)
+    self._destination = cutil.get_spawn_point(self._world, self._destination, self.spawn_point)  # far from spawn_point
+    return self._destination
 
   @property
   def sensor_suite(self) -> simulator.SensorSuite:
