@@ -39,6 +39,7 @@ class ImitativeModel(nn.Module):
   def __init__(
       self,
       output_shape: types.Shape = (4, 2),
+      mobilenet_num_classes: int = 128,
   ) -> None:
     """Constructs a simple imitative model.
 
@@ -48,13 +49,14 @@ class ImitativeModel(nn.Module):
     """
     super(ImitativeModel, self).__init__()
     self._output_shape = output_shape
+    self._mobilenet_num_classes = mobilenet_num_classes
 
     # The convolutional encoder model.
-    self._encoder = MobileNetV2(num_classes=128, in_channels=2)
+    self._encoder = MobileNetV2(num_classes=mobilenet_num_classes, in_channels=2)
 
     # Merges the encoded features and the vector inputs.
     self._merger = MLP(
-        input_size=128 + 3 + 1 + 1,
+        input_size=mobilenet_num_classes + 3 + 1 + 1,
         output_sizes=[64, 64, 64],
         activation_fn=nn.ReLU,
         dropout_rate=None,

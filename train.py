@@ -87,8 +87,13 @@ flags.DEFINE_integer(
 )
 flags.DEFINE_integer(
     name="cuda_val_idx",
-    default=2,
+    default=0,
     help="The index of the graphics card to be used for validation.",
+)
+flags.DEFINE_integer(
+    name="mobilenet_num_classes",
+    default=128,
+    help="The dimension of the output of the mobilenet.",
 )
 
 
@@ -109,6 +114,7 @@ def main(argv):
   clip_gradients = FLAGS.clip_gradients
   cuda_train_idx = FLAGS.cuda_train_idx
   cuda_val_idx = FLAGS.cuda_val_idx
+  mobilenet_num_classes = FLAGS.mobilenet_num_classes
   noise_level = 1e-2
 
   val = False
@@ -126,7 +132,7 @@ def main(argv):
 
   # Initializes the model and its optimizer.
   output_shape = [num_timesteps_to_keep, 2]
-  model = ImitativeModel(output_shape=output_shape).to(train_device)
+  model = ImitativeModel(output_shape=output_shape, mobilenet_num_classes=mobilenet_num_classes).to(train_device)
   optimizer = optim.Adam(
       model.parameters(),
       lr=learning_rate,
