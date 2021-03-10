@@ -171,7 +171,7 @@ def get_agent_fn(model):
 
 def generate_distributions(root_path=None):
     if root_path is None:
-        root_path = os.path.join(DATA_PATH, "dists")
+        root_path = os.path.join(DATA_PATH, "dists2", "train")
     sensors = (
         "acceleration",
         "velocity",
@@ -181,8 +181,8 @@ def generate_distributions(root_path=None):
         "actors_tracker",
     )
     agent_fn=AutopilotAgent
-    n_frames = 5000
-    n_episodes = 10
+    n_frames = 2000
+    n_episodes = 20
     weathers = ("HardRainNoon", "ClearNoon")
     n_ped_cars = (0, 1000)
     towns = ("Town01", "Town02")
@@ -190,6 +190,7 @@ def generate_distributions(root_path=None):
     for weather, n, town, i in tqdm.tqdm(list(itertools.product(weathers, n_ped_cars, towns, range(n_episodes)))[skip:]):
         path = os.path.join(root_path, town+weather+str(n))
         while True:
+            os.makedirs(path, exist_ok=True)
             listdir = os.listdir(path)
             CARLADataset.collect(town, path, n, n, n_frames, None, None, sensors, False, agent_fn, weather)
             newdir = [x for x in os.listdir(path) if x not in listdir][0]  # find new folder
@@ -230,4 +231,4 @@ if __name__=="__main__":
 
         # CARLADataset.annotate_with_model("data/downloaded/processed/train", modalities, mobilenet, "mobilenet", None, num_instances=100)
         CARLADataset.make_arff("data/downloaded/processed/train", "data/downloaded/processed/dummy.arff",("mobilenet",),"oatomobile1",num_instances=100)
-    print(CARLADataset.car_not_moving_counts(os.path.join(DATA_PATH,"downloaded","raw", "train")))
+    generate_distributions()
