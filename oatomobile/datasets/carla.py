@@ -673,7 +673,7 @@ class CARLADataset(Dataset):
         """
         # Internalise hyperparameters.
         self._modalities = modalities
-        self.npz_files = get_npz_files(dataset_dir)
+        self._npz_files = get_npz_files(dataset_dir)
         self._transform = transform
         self._mode = mode
 
@@ -841,12 +841,14 @@ class CARLADataset(Dataset):
           old_location, old_rotation = current_location, current_rotation
         if np.sum((current_location - old_location)**2)**0.5 < 0.0001: #and old_rotation == current_rotation:
           counter += 1
+          if i == len(sequence) - 1:
+            counts.append(counter)
         else:
           counts.append(counter)
           counter = 0
           old_location = current_location
           old_rotation = current_rotation
-        print(i,":",counter)
+        #print(i,":",counter)
       except:
         print("Skipped", i)
     return counts

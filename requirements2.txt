@@ -13,7 +13,7 @@ dm-tree==0.1.5
 future==0.18.2
 google-auth==1.23.0
 google-auth-oauthlib==0.4.1
-grpcio==1.33.2
+grpcio==1.36.1
 gym==0.17.1
 idna==2.10
 imageio==2.8.0
@@ -52,9 +52,9 @@ rsa==4.6
 scikit-image==0.15.0
 scipy==1.4.1
 seaborn==0.9.1
-six==1.15.0
+six @ file:///home/linux1/recipes/ci/six_1610970791821/work
 tabulate==0.8.7
-tensorboard==2.3.0
+tensorboard==1.14.0
 tensorboard-plugin-wit==1.7.0
 torch==1.5.1
 torchvision==0.6.1
@@ -62,7 +62,7 @@ tqdm==4.53.0
 transforms3d==0.3.1
 typed-ast==1.1.0
 urllib3==1.26.2
-Werkzeug==1.0.1
+Werkzeug @ file:///home/ktietz/src/ci/werkzeug_1611932622770/work
 wget==3.2
 wrapt==1.10.11
 zipp==1.2.0

@@ -186,7 +186,7 @@ def generate_distributions(root_path=None):
     weathers = ("HardRainNoon", "ClearNoon")
     n_ped_cars = (0, 1000)
     towns = ("Town01", "Town02")
-    skip = 0
+    skip = 26
     for weather, n, town, i in tqdm.tqdm(list(itertools.product(weathers, n_ped_cars, towns, range(n_episodes)))[skip:]):
         path = os.path.join(root_path, town+weather+str(n))
         while True:
@@ -196,9 +196,11 @@ def generate_distributions(root_path=None):
             newdir = [x for x in os.listdir(path) if x not in listdir][0]  # find new folder
             newdir = os.path.join(path, newdir)
             counts = CARLADataset.car_not_moving_counts(newdir)
+            print(counts)
             if 0.5*sum(counts) < n_frames and counts[-1] < 0.2*n_frames:
                 break
             shutil.rmtree(newdir)
+            print("repeat",weather, n, town, i)
 
 
 def process_distributions(inpath=None, outpath=None):

@@ -1746,6 +1746,9 @@ class CARLASimulator(simulator.Simulator):
         ) for sensor in self._sensors
     ])
 
+    print("spawn_point:", self._spawn_point.location.x,self._spawn_point.location.y)
+    print("destination:", self._destination.location.x, self._destination.location.y)
+
     # HACK(filangel): due to the bug with the lifted vehicle and
     # the LocalPlanner, perform K=50 steps in the simulator.
     for _ in range(50):
