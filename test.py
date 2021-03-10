@@ -6,6 +6,7 @@ import tqdm
 import imageio
 import glob
 import torch
+import shutil
 os.environ["CARLA_ROOT"]="/home/jannik_wagner/carla" if torch.cuda.is_available() else "carla"
 #os.environ["CARLA_ROOT"]="/home/jannik/carla/"
 
@@ -188,9 +189,15 @@ def generate_distributions(root_path=None):
     skip = 0
     for weather, n, town, i in tqdm.tqdm(list(itertools.product(weathers, n_ped_cars, towns, range(n_episodes)))[skip:]):
         path = os.path.join(root_path, town+weather+str(n))
-        CARLADataset.collect(town, path, n, n, n_frames, None, None, sensors, False, agent_fn, weather)
-        CARLADataset.car_not_moving_counts()
-
+        while True:
+            listdir = os.listdir(path)
+            CARLADataset.collect(town, path, n, n, n_frames, None, None, sensors, False, agent_fn, weather)
+            newdir = [x for x in os.listdir(path) if x not in listdir][0]  # find new folder
+            newdir = os.path.join(path, newdir)
+            counts = CARLADataset.car_not_moving_counts(newdir)
+            if 0.5*sum(counts) < n_frames and counts[-1] < 0.2*n_frames:
+                break
+            shutil.rmtree(newdir)
 
 
 def process_distributions(inpath=None, outpath=None):
