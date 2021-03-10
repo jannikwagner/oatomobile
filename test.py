@@ -7,7 +7,7 @@ import imageio
 import glob
 import torch
 import shutil
-os.environ["CARLA_ROOT"]="/home/jannik_wagner/carla" if torch.cuda.is_available() else "carla"
+os.environ["CARLA_ROOT"]=os.path.join(os.curdir,"carla") if torch.cuda.is_available() else "carla"
 #os.environ["CARLA_ROOT"]="/home/jannik/carla/"
 
 import oatomobile
