@@ -718,11 +718,13 @@ class CARLADataset(Dataset):
       model_name,
       transform: Optional[Callable[[Any], Any]] = None,
       mode: bool = False,
-      num_instances=None):
+      num_instances=None,
+      device="cpu",
+      recursive=True):
     from oatomobile.torch import transforms
     import torch
 
-    npz_files = get_npz_files(dataset_dir)
+    npz_files = get_npz_files(dataset_dir,recursive)
     for npz_file in tqdm.tqdm(npz_files[:num_instances]):
       # prepare sample
       sample = cls.load_datum(
@@ -753,8 +755,8 @@ class CARLADataset(Dataset):
                 visual_features=lidar,
                 output_shape=(100, 100),
             ))
-      
-      model_output = model(lidar)[0]
+      lidar = lidar.to(device)
+      model_output = model(lidar)[0].cpu()
 
       with np.load(
          npz_file,
@@ -777,7 +779,7 @@ class CARLADataset(Dataset):
       relation_name: str,
       comments: Optional[List[str]] = None,
       mode: bool = False,
-      recursive=False,
+      recursive=True,
       dataformat="HWC",
       num_timesteps_to_keep: int = 4,
       num_instances=None):
@@ -802,7 +804,7 @@ class CARLADataset(Dataset):
             value = observation[key]
             if isinstance(value, np.ndarray):
               for i in range(len(value.flat)):
-                arff_file.write("@ATTRIBUTE {}{} NUMERIC\n".format(key, i))
+                arff_file.write("@ATTRIBUTE {}_{} NUMERIC\n".format(key, i))
             elif isinstance(value, int) or isinstance(value, float):
                 arff_file.write("@ATTRIBUTE {} NUMERIC\n".format(key))
             else:

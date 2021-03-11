@@ -1,4 +1,5 @@
-from defaults import PATH, MODELS_PATH, DATA_PATH
+from defaults import PATH, MODELS_PATH, DATA_PATH, device
+from evaluate import getDIM
 
 import os
 import numpy as np
@@ -199,36 +200,51 @@ def process_distributions(inpath=None, outpath=None):
         if dist != os.path.split(outpath)[-1]:
             CARLADataset.process(os.path.join(inpath, dist), os.path.join(outpath, dist))
 
+def test_annotate_no_corruption():
+    orig_path = os.path.join(DATA_PATH, "dists3", "raw", "0_Town01ClearNoon0","b78cf9653f3b4c4ab69f2fc60b4e05d1")
+    mod_path = os.path.join(DATA_PATH, "dists3", "raw","test", "0_Town01ClearNoon0","b78cf9653f3b4c4ab69f2fc60b4e05d1")
+    for f in os.listdir(orig_path):
+        if f.endswith(".npz"):
+            orig_file = dict(np.load(os.path.join(orig_path, f)))
+            mod_file = dict(np.load(os.path.join(mod_path, f)))
+            for key in orig_file:
+                comp = orig_file[key]==mod_file[key]
+                if isinstance(comp, np.ndarray) and not comp.all() or not isinstance(comp, np.ndarray) and not comp:
+                    print(orig_file[key],)
+                    print(mod_file[key])
+                    print()
 
 if __name__=="__main__":
     if False:
-        model = ImitativeModel()
+        ckpt_path = os.path.join(MODELS_PATH, "dim","downloaded_d128", "ckpts","model-108.pt")
+        data_path = os.path.join(DATA_PATH, "dists3", "raw", "test")
+        arff_path = os.path.join(DATA_PATH, "dists3", "raw", "test.arff")
+        model = getDIM(ckpt_path,device,128)
         mobilenet = dict(model.named_children())["_encoder"]
-        # CARLADataset("processed").download_and_prepare(os.path.join(DATA_PATH, "downloaded"))
         modalities = (
             "lidar",
             "is_at_traffic_light",
             "traffic_light_state",
             "velocity",
-            "player_future",
         )
 
-        # CARLADataset.annotate_with_model("data/downloaded/processed/train", modalities, mobilenet, "mobilenet", None, num_instances=100)
-        CARLADataset.make_arff("data/downloaded/processed/train", "data/downloaded/processed/dummy.arff",("mobilenet",),"oatomobile1",num_instances=100)
+        CARLADataset.annotate_with_model(data_path, modalities, mobilenet, "mobilenet_d128_e108",device=device)
+        CARLADataset.make_arff(data_path, arff_path,("mobilenet_d128_e108",),"mobilenet_d128_e108")
+    if False:
 
-    root_path = os.path.join(DATA_PATH,"dists3","raw","test")
-    dists = [["Town01","ClearNoon",0],["Town02","HardRainNoon",1000],["Town01","ClearNoon",0],["Town02","HardRainNoon",1000]]
-    n_frames=1000
-    sensors = (
-            "acceleration",
-            "velocity",
-            "lidar",
-            "is_at_traffic_light",
-            "traffic_light_state",
-            "actors_tracker",
-            "front_camera_rgb",
-        )
-    agent_fn = AutopilotAgent
-    for i, (town, weather, n) in enumerate(dists):
-        path = os.path.join(root_path, str(i)+"_"+town+weather+str(n))
-        collect_not_moving_counts(town, path, n, n, n_frames, sensors, agent_fn, weather)
+        root_path = os.path.join(DATA_PATH,"dists3","raw","test")
+        dists = [["Town01","ClearNoon",0],["Town02","HardRainNoon",1000],["Town01","ClearNoon",0],["Town02","HardRainNoon",1000]]
+        n_frames=1000
+        sensors = (
+                "acceleration",
+                "velocity",
+                "lidar",
+                "is_at_traffic_light",
+                "traffic_light_state",
+                "actors_tracker",
+                "front_camera_rgb",
+            )
+        agent_fn = AutopilotAgent
+        for i, (town, weather, n) in enumerate(dists):
+            path = os.path.join(root_path, str(i)+"_"+town+weather+str(n))
+            collect_not_moving_counts(town, path, n, n, n_frames, sensors, agent_fn, weather)
