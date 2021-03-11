@@ -190,7 +190,6 @@ def collect_not_moving_counts(town, output_dir, num_vehicles, num_pedestrains, n
         print("repeat",weather, num_vehicles, town)
 
 
-
 def process_distributions(inpath=None, outpath=None, num_frame_skips=5):
     if inpath is None:
         inpath = os.path.join(DATA_PATH, "dists","raw", "train")
@@ -247,3 +246,10 @@ if __name__=="__main__":
         for i, (town, weather, n) in enumerate(dists):
             path = os.path.join(root_path, str(i)+"_"+town+weather+str(n))
             collect_not_moving_counts(town, path, n, n, n_frames, sensors, agent_fn, weather)
+    
+    inpath = os.path.join(DATA_PATH, "dists3","raw", "train")
+    outpath5 = os.path.join(DATA_PATH, "dists3", "processed5","train")
+    outpath1 = os.path.join(DATA_PATH, "dists3", "processed1","train")
+    process_distributions(inpath,outpath5,num_frame_skips=5)
+    process_distributions(inpath,outpath1,num_frame_skips=1)
+    
