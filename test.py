@@ -1,3 +1,5 @@
+from defaults import PATH, MODELS_PATH, DATA_PATH
+
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -19,7 +21,6 @@ from oatomobile.baselines.torch.dim.model import ImitativeModel
 from oatomobile.baselines.torch.dim.agent import DIMAgent
 import carla
 import itertools
-from defaults import PATH, MODELS_PATH, DATA_PATH
 
 def test_data_gen(sensors=(
         "acceleration",
