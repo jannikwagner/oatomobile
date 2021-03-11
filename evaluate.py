@@ -1,6 +1,25 @@
-import numpy as np
 import os
-import 
+import numpy as np
+import matplotlib.pyplot as plt
+import random
+import tqdm
+import imageio
+import glob
+import torch
+import shutil
+
+import oatomobile
+import oatomobile.envs
+from oatomobile.datasets.carla import CARLADataset, get_npz_files
+import oatomobile.baselines.torch.dim.train as train
+from oatomobile.core.dataset import Episode
+from oatomobile.baselines.rulebased.autopilot.agent import AutopilotAgent
+from oatomobile.torch.networks.perception import MobileNetV2
+from oatomobile.baselines.torch.dim.model import ImitativeModel
+from oatomobile.baselines.torch.dim.agent import DIMAgent
+import carla
+import itertools
+from defaults import PATH, MODELS_PATH, DATA_PATH
 
 
 def getDIM(path=None, mobilenet_num_classes=128):
@@ -17,3 +36,6 @@ def get_agent_fn(model):
         return DIMAgent(environment, model=model)
     return agent_fn
 
+def evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=128):
+    model = getDIM(ckpt_path, mobilenet_num_classes)
+    
