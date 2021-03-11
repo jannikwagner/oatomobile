@@ -7,8 +7,6 @@ import imageio
 import glob
 import torch
 import shutil
-os.environ["CARLA_ROOT"]=os.path.join(os.curdir,"carla") if torch.cuda.is_available() else "carla"
-#os.environ["CARLA_ROOT"]="/home/jannik/carla/"
 
 import oatomobile
 import oatomobile.envs
@@ -21,12 +19,7 @@ from oatomobile.baselines.torch.dim.model import ImitativeModel
 from oatomobile.baselines.torch.dim.agent import DIMAgent
 import carla
 import itertools
-
-
-PATH = os.path.join(os.getcwd())
-DATA_PATH = os.path.join(PATH, "data")
-MODELS_PATH = os.path.join(PATH, "models")
-
+from defaults import PATH, MODELS_PATH, DATA_PATH
 
 def test_data_gen(sensors=(
         "acceleration",
@@ -156,21 +149,6 @@ def imgs_to_gif(inpath, outfile, prefix, start=0, end=None):
 #    imgs_to_gif(os.path.join(DATA_PATH, "visualization", "rgb", "front_camera_rgb"), os.path.join(DATA_PATH, "visualization", "rgb", "front_camera_rgb.gif"), "front_camera_rgb", 100, 400)
 
 
-def getDIM(path=None, mobilenet_num_classes=128):
-    if path is None:
-        path = os.path.join(MODELS_PATH, "dim", "9", "ckpts", "model-96.pt")
-    model = ImitativeModel(mobilenet_num_classes=mobilenet_num_classes)
-    x = torch.load(path)
-    model.load_state_dict(x)
-    return model
-
-
-def get_agent_fn(model):
-    def agent_fn(environment):
-        return DIMAgent(environment, model=model)
-    return agent_fn
-
-
 def generate_distributions(root_path=None,sensors=None,n_frames=2000,n_episodes=20,
         weathers=None, n_ped_cars=None,towns=None,skip=0):
     if root_path is None:
@@ -193,18 +171,22 @@ def generate_distributions(root_path=None,sensors=None,n_frames=2000,n_episodes=
         towns = ("Town01", "Town02")
     for weather, n, town, i in tqdm.tqdm(list(itertools.product(weathers, n_ped_cars, towns, range(n_episodes)))[skip:]):
         path = os.path.join(root_path, town+weather+str(n))
-        while True:
-            os.makedirs(path, exist_ok=True)
-            listdir = os.listdir(path)
-            CARLADataset.collect(town, path, n, n, n_frames, None, None, sensors, False, agent_fn, weather)
-            newdir = [x for x in os.listdir(path) if x not in listdir][0]  # find new folder
-            newdir = os.path.join(path, newdir)
-            counts = CARLADataset.car_not_moving_counts(newdir)
-            print(counts)
-            if 0.5*sum(counts) < n_frames and counts[-1] < 0.2*n_frames:
-                break
-            shutil.rmtree(newdir)
-            print("repeat",weather, n, town, i)
+        collect_not_moving_counts(town, path, n, n, n_frames, sensors, agent_fn, weather)
+
+def collect_not_moving_counts(town, output_dir, num_vehicles, num_pedestrains, n_frames, sensors, agent_fn, weather):
+    while True:
+        os.makedirs(output_dir, exist_ok=True)
+        listdir = os.listdir(output_dir)
+        CARLADataset.collect(town, output_dir, num_vehicles, num_pedestrains, n_frames, None, None, sensors, False, agent_fn, weather)
+        newdir = [x for x in os.listdir(output_dir) if x not in listdir][0]  # find new folder
+        newdir = os.path.join(output_dir, newdir)
+        counts = CARLADataset.car_not_moving_counts(newdir)
+        print(counts)
+        if 0.5*sum(counts) < n_frames and counts[-1] < 0.2*n_frames:
+            break
+        shutil.rmtree(newdir)
+        print("repeat",weather, num_vehicles, town)
+
 
 
 def process_distributions(inpath=None, outpath=None):
@@ -215,11 +197,6 @@ def process_distributions(inpath=None, outpath=None):
     for dist in os.listdir(inpath):
         if dist != os.path.split(outpath)[-1]:
             CARLADataset.process(os.path.join(inpath, dist), os.path.join(outpath, dist))
-
-
-def test_collect():
-    CARLADataset.collect("Town01", os.path.join(DATA_PATH, "test"), 0, 0, 50, None, None, ("lidar",), False, AutopilotAgent, None)
-    CARLADataset.collect("Town01", os.path.join(DATA_PATH, "test"), 0, 0, 50, None, None, ("lidar",), False, AutopilotAgent, None)
 
 
 if __name__=="__main__":
@@ -237,4 +214,20 @@ if __name__=="__main__":
 
         # CARLADataset.annotate_with_model("data/downloaded/processed/train", modalities, mobilenet, "mobilenet", None, num_instances=100)
         CARLADataset.make_arff("data/downloaded/processed/train", "data/downloaded/processed/dummy.arff",("mobilenet",),"oatomobile1",num_instances=100)
-    generate_distributions()
+
+    root_path = os.path.join(DATA_PATH,"dists3","raw","test")
+    dists = [["Town01","ClearNoon",0],["Town02","HardRainNoon",1000],["Town01","ClearNoon",0],["Town02","HardRainNoon",1000]]
+    n_frames=1000
+    sensors = (
+            "acceleration",
+            "velocity",
+            "lidar",
+            "is_at_traffic_light",
+            "traffic_light_state",
+            "actors_tracker",
+            "front_camera_rgb",
+        )
+    agent_fn = AutopilotAgent
+    for i, (town, weather, n) in enumerate(dists):
+        path = os.path.join(root_path, str(i)+"_"+town+weather+str(n))
+        collect_not_moving_counts(town, path, n, n, n_frames, sensors, agent_fn, weather)
