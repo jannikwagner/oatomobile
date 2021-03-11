@@ -100,24 +100,27 @@ def evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=128):
     FDE_10s = []
     FDE_100s = []
     minFDE_ks = []
+    torch.cuda.empty_cache()
     with tqdm.tqdm(dataloader) as pbar:
         for batch in pbar:  # gives errors with num_workers > 1
             # Prepares the batch.
 
             batch = transform(model, batch, device)
             ground_truth = batch["player_future"]
-            samples = [model.sample(**batch) for _ in range(k)]
-            mean = model.mean(**batch)
-            y_10 = model.forward(10,**batch)
-            y_100 = model.forward(100,**batch)
-            ADE_ms.append(ADE(mean, ground_truth))
+            y_samples = [model.sample(**batch).detach() for _ in range(k)]
+            minADE_ks.append(minADE(y_samples, ground_truth))
+            minFDE_ks.append(minFDE(y_samples, ground_truth))
+            del y_samples
+            y_mean = model.mean(**batch).detach()
+            ADE_ms.append(ADE(y_mean, ground_truth))
+            FDE_ms.append(FDE(y_mean, ground_truth))
+            del y_mean
+            y_10 = model.forward(10,**batch).detach()
+            y_100 = model.forward(100,**batch).detach()
             ADE_10s.append(ADE(y_10, ground_truth))
             ADE_100s.append(ADE(y_100, ground_truth))
-            minADE_ks.append(minADE(samples, ground_truth))
-            FDE_ms.append(FDE(mean, ground_truth))
             FDE_10s.append(FDE(y_10, ground_truth))
             FDE_100s.append(FDE(y_100, ground_truth))
-            minFDE_ks.append(minFDE(samples, ground_truth))
     measure_lists = ADE_ms,ADE_10s,ADE_100s,minADE_ks,FDE_ms,FDE_10s,FDE_100s,minFDE_ks
     measures = [torch.stack(measure).mean().item() for measure in measure_lists]
     ADE_m,ADE_10,ADE_100,minADE_k,FDE_m,FDE_10,FDE_100,minFDE_k = measures
