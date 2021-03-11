@@ -156,8 +156,10 @@ def imgs_to_gif(inpath, outfile, prefix, start=0, end=None):
 #    imgs_to_gif(os.path.join(DATA_PATH, "visualization", "rgb", "front_camera_rgb"), os.path.join(DATA_PATH, "visualization", "rgb", "front_camera_rgb.gif"), "front_camera_rgb", 100, 400)
 
 
-def getDIM(path=os.path.join(MODELS_PATH, "dim", "9", "ckpts", "model-96.pt")):
-    model = ImitativeModel()
+def getDIM(path=None, mobilenet_num_classes=128):
+    if path is None:
+        path = os.path.join(MODELS_PATH, "dim", "9", "ckpts", "model-96.pt")
+    model = ImitativeModel(mobilenet_num_classes=mobilenet_num_classes)
     x = torch.load(path)
     model.load_state_dict(x)
     return model
@@ -169,24 +171,26 @@ def get_agent_fn(model):
     return agent_fn
 
 
-def generate_distributions(root_path=None):
+def generate_distributions(root_path=None,sensors=None,n_frames=2000,n_episodes=20,
+        weathers=None, n_ped_cars=None,towns=None,skip=0):
     if root_path is None:
         root_path = os.path.join(DATA_PATH, "dists2", "train")
-    sensors = (
-        "acceleration",
-        "velocity",
-        "lidar",
-        "is_at_traffic_light",
-        "traffic_light_state",
-        "actors_tracker",
-    )
+    if sensors is None:
+        sensors = (
+            "acceleration",
+            "velocity",
+            "lidar",
+            "is_at_traffic_light",
+            "traffic_light_state",
+            "actors_tracker",
+        )
     agent_fn=AutopilotAgent
-    n_frames = 2000
-    n_episodes = 20
-    weathers = ("HardRainNoon", "ClearNoon")
-    n_ped_cars = (0, 1000)
-    towns = ("Town01", "Town02")
-    skip = 26
+    if weathers is None:
+        weathers = ("HardRainNoon", "ClearNoon")
+    if n_ped_cars is None:
+        n_ped_cars = (0, 1000)
+    if towns is None:
+        towns = ("Town01", "Town02")
     for weather, n, town, i in tqdm.tqdm(list(itertools.product(weathers, n_ped_cars, towns, range(n_episodes)))[skip:]):
         path = os.path.join(root_path, town+weather+str(n))
         while True:
