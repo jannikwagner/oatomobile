@@ -57,18 +57,18 @@ def transform(model, batch,
     return batch
 
 def ADE(pred: torch.Tensor, ground_truth: torch.Tensor):
-    return (pred - ground_truth).square().sum(axis=-1).sqrt().mean(axis=-1)
+    return (pred[:,:,:2] - ground_truth[:,:,:2]).square().sum(axis=-1).sqrt().mean(axis=-1)
 
 def FDE(pred: torch.Tensor, ground_truth: torch.Tensor):
-    (pred[:,-1,:] - ground_truth[:,-1,:]).square().sum(axis=-1).sqrt()
+    return (pred[:,-1,:2] - ground_truth[:,-1,:2]).square().sum(axis=-1).sqrt()
 
 def minADE(samples: List[torch.Tensor], ground_truth: torch.Tensor):
     samples_ADE = [ADE(sample, ground_truth) for sample in samples]
-    return torch.stack(samples_ADE).min(axis=0)
+    return torch.stack(samples_ADE).min(axis=0)[0]
 
 def minFDE(samples: List[torch.Tensor], ground_truth: torch.Tensor):
     samples_FDE = [FDE(sample, ground_truth) for sample in samples]
-    return torch.stack(samples_FDE).min(axis=0)
+    return torch.stack(samples_FDE).min(axis=0)[0]
 
 def evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=128):
     model = getDIM(ckpt_path, device, mobilenet_num_classes)
@@ -102,7 +102,7 @@ def evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=128):
     minFDE_ks = []
     torch.cuda.empty_cache()
     with tqdm.tqdm(dataloader) as pbar:
-        for batch in pbar:  # gives errors with num_workers > 1
+        for i, batch in enumerate(pbar):  # gives errors with num_workers > 1
             # Prepares the batch.
 
             batch = transform(model, batch, device)
@@ -121,6 +121,8 @@ def evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=128):
             ADE_100s.append(ADE(y_100, ground_truth))
             FDE_10s.append(FDE(y_10, ground_truth))
             FDE_100s.append(FDE(y_100, ground_truth))
+            # if i == 20:9
+            #     break
     measure_lists = ADE_ms,ADE_10s,ADE_100s,minADE_ks,FDE_ms,FDE_10s,FDE_100s,minFDE_ks
     measures = [torch.stack(measure).mean().item() for measure in measure_lists]
     ADE_m,ADE_10,ADE_100,minADE_k,FDE_m,FDE_10,FDE_100,minFDE_k = measures
