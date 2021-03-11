@@ -190,14 +190,13 @@ def collect_not_moving_counts(town, output_dir, num_vehicles, num_pedestrains, n
 
 
 
-def process_distributions(inpath=None, outpath=None):
+def process_distributions(inpath=None, outpath=None, num_frame_skips=5):
     if inpath is None:
-        inpath = os.path.join(DATA_PATH, "dists")
+        inpath = os.path.join(DATA_PATH, "dists","raw", "train")
     if outpath is None:
-        outpath = os.path.join(DATA_PATH, "dists", "processed")
+        outpath = os.path.join(DATA_PATH, "dists", "processed","train")
     for dist in os.listdir(inpath):
-        if dist != os.path.split(outpath)[-1]:
-            CARLADataset.process(os.path.join(inpath, dist), os.path.join(outpath, dist))
+        CARLADataset.process(os.path.join(inpath, dist), os.path.join(outpath, dist), num_frame_skips=num_frame_skips)
 
 
 if __name__=="__main__":
