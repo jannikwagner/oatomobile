@@ -228,11 +228,12 @@ if __name__=="__main__":
 
         CARLADataset.annotate_with_model(data_path, modalities, mobilenet, "mobilenet_d128_e108",device=device)
         CARLADataset.make_arff(data_path, arff_path,("mobilenet_d128_e108",),"mobilenet_d128_e108")
-    if False:
-
-        root_path = os.path.join(DATA_PATH,"dists3","raw","test")
-        dists = [["Town01","ClearNoon",0],["Town02","HardRainNoon",1000],["Town01","ClearNoon",0],["Town02","HardRainNoon",1000]]
-        n_frames=1000
+    if True:
+        root_path = os.path.join(DATA_PATH,"dists4","raw","test")
+        d0 = ["Town01","ClearNoon",0]
+        d1 = ["Town02","HardRainNoon",1000]
+        dists = [d0,d0,d1,d1,d0,d0,d1,d1]
+        n_frames=2000
         sensors = (
                 "acceleration",
                 "velocity",
@@ -246,10 +247,10 @@ if __name__=="__main__":
         for i, (town, weather, n) in enumerate(dists):
             path = os.path.join(root_path, str(i)+"_"+town+weather+str(n))
             collect_not_moving_counts(town, path, n, n, n_frames, sensors, agent_fn, weather)
-    
-    inpath = os.path.join(DATA_PATH, "dists3","raw", "train")
-    outpath5 = os.path.join(DATA_PATH, "dists3", "processed5","train")
-    outpath1 = os.path.join(DATA_PATH, "dists3", "processed1","train")
-    process_distributions(inpath,outpath5,num_frame_skips=5)
-    process_distributions(inpath,outpath1,num_frame_skips=1)
+    if False:
+        inpath = os.path.join(DATA_PATH, "dists3","raw", "train")
+        outpath5 = os.path.join(DATA_PATH, "dists3", "processed5","train")
+        outpath1 = os.path.join(DATA_PATH, "dists3", "processed1","train")
+        process_distributions(inpath,outpath5,num_frame_skips=5)
+        process_distributions(inpath,outpath1,num_frame_skips=1)
     
