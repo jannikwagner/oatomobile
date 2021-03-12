@@ -247,9 +247,9 @@ if __name__=="__main__":
             path = os.path.join(root_path, str(i)+"_"+town+weather+str(n))
             collect_not_moving_counts(town, path, n, n, n_frames, sensors, agent_fn, weather)
     
-    inpath = os.path.join(DATA_PATH, "dists3","raw", "train")
-    outpath5 = os.path.join(DATA_PATH, "dists3", "processed5","train")
-    outpath1 = os.path.join(DATA_PATH, "dists3", "processed1","train")
+    inpath = os.path.join(DATA_PATH, "dists2","raw", "train")
+    outpath5 = os.path.join(DATA_PATH, "dists2", "processed5","train")
+    outpath1 = os.path.join(DATA_PATH, "dists2", "processed1","train")
     process_distributions(inpath,outpath5,num_frame_skips=5)
     process_distributions(inpath,outpath1,num_frame_skips=1)
     
