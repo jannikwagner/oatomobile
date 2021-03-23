@@ -118,7 +118,7 @@ def main(argv):
   mobilenet_num_classes = FLAGS.mobilenet_num_classes
   noise_level = 1e-2
 
-  val = False
+  val = True
 
   # Determines device, accelerator.
   train_device = torch.device("cuda:{}".format(cuda_train_idx) if torch.cuda.is_available() else "cpu")  # pylint: disable=no-member

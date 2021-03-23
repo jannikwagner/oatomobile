@@ -815,7 +815,7 @@ class CARLADataset(Dataset):
         arff_file.write(line)
 
   @classmethod
-  def car_not_moving_counts(cls, dataset_dir: str):
+  def car_not_moving_counts(cls, dataset_dir: str, eps=0.01):  # 0.001 seems to be a good threshold since standing cars often seem to move around 0.0005
     if dataset_dir[-1] == "/":
       dataset_dir = dataset_dir[:-1]
     dataset_dir, token = os.path.split(dataset_dir)
@@ -841,10 +841,10 @@ class CARLADataset(Dataset):
         current_rotation = observation["rotation"]
         if old_location is None:
           old_location, old_rotation = current_location, current_rotation
-        if np.sum((current_location - old_location)**2)**0.5 < 0.0001: #and old_rotation == current_rotation:
+        distance = np.sum((current_location - old_location)**2)**0.5
+        #print(distance)
+        if distance < eps: #and old_rotation == current_rotation:
           counter += 1
-          if i == len(sequence) - 1:
-            counts.append(counter)
         else:
           counts.append(counter)
           counter = 0
@@ -853,6 +853,8 @@ class CARLADataset(Dataset):
         #print(i,":",counter)
       except:
         print("Skipped", i)
+    if counter != 0:
+      counts.append(counter)
     return counts
       
 def get_observation_line(observation, modalities, round=10):

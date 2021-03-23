@@ -121,8 +121,8 @@ def evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=128):
             ADE_100s.append(ADE(y_100, ground_truth))
             FDE_10s.append(FDE(y_10, ground_truth))
             FDE_100s.append(FDE(y_100, ground_truth))
-            # if i == 20:9
-            #     break
+            if i == 20:
+                break
     measure_lists = ADE_ms,ADE_10s,ADE_100s,minADE_ks,FDE_ms,FDE_10s,FDE_100s,minFDE_ks
     measures = [torch.stack(measure).mean().item() for measure in measure_lists]
     ADE_m,ADE_10,ADE_100,minADE_k,FDE_m,FDE_10,FDE_100,minFDE_k = measures
@@ -132,8 +132,13 @@ def evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=128):
     df.to_csv(output_path)
 
 if __name__ == "__main__":
-    ckpt_path = os.path.join(MODELS_PATH, "dim","downloaded_d128", "ckpts","model-100.pt")
+    ckpt_path = os.path.join(MODELS_PATH, "dim","dists2_skip5_d64", "ckpts","model-196.pt")
     data_path = os.path.join(DATA_PATH, "downloaded", "processed", "val")
-    output_path = os.path.join(MODELS_PATH, "dim", "downloaded_d128", "eval_100.csv")
-    evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=128)
+    output_path = os.path.join(MODELS_PATH, "dim", "dists2_skip5_d64", "eval_196.csv")
+    evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=64)
+
+    ckpt_path = os.path.join(MODELS_PATH, "dim","dists2_skip1_d64", "ckpts","model-12.pt")
+    data_path = os.path.join(DATA_PATH, "downloaded", "processed", "val")
+    output_path = os.path.join(MODELS_PATH, "dim", "dists2_skip1_d64", "eval_12.csv")
+    evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=64)
     

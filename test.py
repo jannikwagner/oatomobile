@@ -23,6 +23,25 @@ from oatomobile.baselines.torch.dim.agent import DIMAgent
 import carla
 import itertools
 
+WEATHERS = {
+    "ClearNoon":carla.WeatherParameters.ClearNoon,
+    "ClearSunset":carla.WeatherParameters.ClearSunset,
+    "CloudyNoon":carla.WeatherParameters.CloudyNoon,
+    "CloudySunset":carla.WeatherParameters.CloudySunset,
+    "Default":carla.WeatherParameters.Default,
+    "HardRainNoon":carla.WeatherParameters.HardRainNoon,
+    "HardRainSunset":carla.WeatherParameters.HardRainSunset,
+    "MidRainSunset":carla.WeatherParameters.MidRainSunset,
+    "MidRainyNoon":carla.WeatherParameters.MidRainyNoon,
+    "SoftRainNoon":carla.WeatherParameters.SoftRainNoon,
+    "SoftRainSunset":carla.WeatherParameters.SoftRainSunset,
+    "WetCloudyNoon":carla.WeatherParameters.WetCloudyNoon,
+    "WetCloudySunset":carla.WeatherParameters.WetCloudySunset,
+    "WetNoon":carla.WeatherParameters.WetNoon,
+    "WetSunset":carla.WeatherParameters.WetSunset
+}
+
+
 def test_data_gen(sensors=(
         "acceleration",
         "velocity",
@@ -112,18 +131,16 @@ def visualize_raw_rgb(sensors=(
         "right_camera_rgb",
         "bird_view_camera_rgb",
         "bird_view_camera_cityscapes",
-        "lidar"), path=None, outpath=None, token=None, start=None, end=None, step=None):
+        "lidar"), path=None, outpath=None, start=None, end=None, step=None):
     if path is None:
         path=os.path.join(DATA_PATH, "rgb")
-    if token is None:
-        token = random.choice(os.listdir(path))
     if outpath is None:
         outpath = os.path.join(DATA_PATH, "visualization", "rgb")
 
     output_dirs = {sensor: os.path.join(outpath, sensor) for sensor in sensors}
     for output_dir in output_dirs.values():
         os.makedirs(output_dir, exist_ok=True)
-    episode = Episode(path, token)
+    episode = Episode(path, "")
     for i, line in enumerate(tqdm.tqdm(episode.fetch()[start:end:step])):
         x = episode.read_sample(line, None)
         for sensor, output_dir in output_dirs.items():
@@ -134,7 +151,7 @@ def visualize_raw_rgb(sensors=(
                     img2[:,:,:2] = img
                     img = img2
                     pass
-                plt.imsave(os.path.join(output_dir, "{a}{i}.png".format(a=sensor,i=i)), img)
+                plt.imsave(os.path.join(output_dir, "{a}_{i}.png".format(a=sensor,i=i)), img)
 
 
 def imgs_to_gif(inpath, outfile, prefix, start=0, end=None):
@@ -144,7 +161,7 @@ def imgs_to_gif(inpath, outfile, prefix, start=0, end=None):
     assert start <= end <= count
     images = []
     for i in tqdm.trange(start, end):
-        filename = os.path.join(inpath, "{prefix}{i}.png".format(prefix=prefix,i=i))
+        filename = os.path.join(inpath, "{prefix}_{i}.png".format(prefix=prefix,i=i))
         images.append(imageio.imread(filename))    
     imageio.mimsave(outfile, images)
 #    imgs_to_gif(os.path.join(DATA_PATH, "visualization", "rgb", "lidar"), os.path.join(DATA_PATH, "visualization", "rgb", "lidar.gif"), "c", 100, 200)
@@ -152,7 +169,7 @@ def imgs_to_gif(inpath, outfile, prefix, start=0, end=None):
 
 
 def generate_distributions(root_path=None,sensors=None,n_frames=2000,n_episodes=20,
-        weathers=None, n_ped_cars=None,towns=None,skip=0):
+        weathers=None, n_ped_cars=None,towns=None,start=0,end=None):
     if root_path is None:
         root_path = os.path.join(DATA_PATH, "dists2", "train")
     if sensors is None:
@@ -168,27 +185,33 @@ def generate_distributions(root_path=None,sensors=None,n_frames=2000,n_episodes=
     if weathers is None:
         weathers = ("HardRainNoon", "ClearNoon")
     if n_ped_cars is None:
-        n_ped_cars = (0, 1000)
+        n_ped_cars = (0, 50)
     if towns is None:
         towns = ("Town01", "Town02")
-    for weather, n, town, i in tqdm.tqdm(list(itertools.product(weathers, n_ped_cars, towns, range(n_episodes)))[skip:]):
+    for weather, n, town, i in tqdm.tqdm(list(itertools.product(weathers, n_ped_cars, towns, range(n_episodes)))[start:end]):
         path = os.path.join(root_path, town+weather+str(n))
         collect_not_moving_counts(town, path, n, n, n_frames, sensors, agent_fn, weather)
 
-def collect_not_moving_counts(town, output_dir, num_vehicles, num_pedestrains, n_frames, sensors, agent_fn, weather):
+def collect_not_moving_counts(town, output_dir, num_vehicles, num_pedestrains, n_frames, sensors, agent_fn, weather,visualize=True):
     while True:
         os.makedirs(output_dir, exist_ok=True)
         listdir = os.listdir(output_dir)
         CARLADataset.collect(town, output_dir, num_vehicles, num_pedestrains, n_frames, None, None, sensors, False, agent_fn, weather)
         newdir = [x for x in os.listdir(output_dir) if x not in listdir][0]  # find new folder
-        newdir = os.path.join(output_dir, newdir)
-        counts = CARLADataset.car_not_moving_counts(newdir)
+        newdir_path = os.path.join(output_dir, newdir)
+        counts = CARLADataset.car_not_moving_counts(newdir_path)
         print(counts)
-        if 0.5*sum(counts) < n_frames and counts[-1] < 0.2*n_frames:
+        if 0.5*sum(counts) < n_frames and counts[-1] < 0.4*n_frames:
             break
-        shutil.rmtree(newdir)
+        shutil.rmtree(newdir_path)
         print("repeat",weather, num_vehicles, town)
 
+    if visualize:
+        vis_path = os.path.join(output_dir,"vis",newdir)
+        os.makedirs(vis_path, exist_ok=True)
+        with open(os.path.join(vis_path, "not_moving_counts.txt"),"w") as counts_file:
+            counts_file.write(str(counts))
+        visualize_raw_rgb(path=newdir_path,outpath=vis_path,)
 
 def process_distributions(inpath=None, outpath=None, num_frame_skips=5):
     if inpath is None:
@@ -213,27 +236,32 @@ def test_annotate_no_corruption():
                     print()
 
 if __name__=="__main__":
-    if False:
-        ckpt_path = os.path.join(MODELS_PATH, "dim","downloaded_d128", "ckpts","model-108.pt")
-        data_path = os.path.join(DATA_PATH, "dists3", "raw", "test")
-        arff_path = os.path.join(DATA_PATH, "dists3", "raw", "test.arff")
-        model = getDIM(ckpt_path,device,128)
-        mobilenet = dict(model.named_children())["_encoder"]
-        modalities = (
-            "lidar",
-            "is_at_traffic_light",
-            "traffic_light_state",
-            "velocity",
-        )
+    if False:  # generate dists5
+        root_path = os.path.join(DATA_PATH, "dists7", "raw","val",)
+        generate_distributions(root_path, n_frames=2000, n_episodes=5,end=10)
+        # root_path = os.path.join(DATA_PATH, "dists7", "raw","train")
+        # generate_distributions(root_path, n_frames=2000, n_episodes=50)
 
-        CARLADataset.annotate_with_model(data_path, modalities, mobilenet, "mobilenet_d128_e108",device=device)
-        CARLADataset.make_arff(data_path, arff_path,("mobilenet_d128_e108",),"mobilenet_d128_e108")
-    if True:
-        root_path = os.path.join(DATA_PATH,"dists4","raw","test")
+    if False:
+        raw_path = os.path.join(DATA_PATH, "dists7", "raw","val",)
+        processed_path = os.path.join(DATA_PATH, "dists7", "processed5","val",)
+        process_distributions(raw_path, processed_path,num_frame_skips=5)
+        raw_path = os.path.join(DATA_PATH, "dists7", "raw","train",)
+        processed_path = os.path.join(DATA_PATH, "dists7", "processed5","train",)
+        process_distributions(raw_path, processed_path,num_frame_skips=5)
+
+    if False:  # create test distributions
+        root_path = os.path.join(DATA_PATH,"dists8","raw","test")
         d0 = ["Town01","ClearNoon",0]
-        d1 = ["Town02","HardRainNoon",1000]
-        dists = [d0,d0,d1,d1,d0,d0,d1,d1]
+        d1 = ["Town02","HardRainNoon",50]
+        d2 = ["Town03","WetCloudySunset",0]
+        dist_list = [d0,d1,d2]
+        dists = [d0,d1,d2,d0,d1,d0,d2,d1,d2,d0,d0,d1,d2,d0,d1,d0,d2,d1,d2,d0]
         n_frames=2000
+        os.makedirs(root_path, exist_ok=True)
+        target = list(np.asarray([[dist_list.index(d)]*n_frames for d in dists]).flat)
+        with open(os.path.join(root_path, "target_dists.txt"),"w") as f:
+            f.write(str(target))
         sensors = (
                 "acceleration",
                 "velocity",
@@ -247,10 +275,56 @@ if __name__=="__main__":
         for i, (town, weather, n) in enumerate(dists):
             path = os.path.join(root_path, str(i)+"_"+town+weather+str(n))
             collect_not_moving_counts(town, path, n, n, n_frames, sensors, agent_fn, weather)
-    if False:
-        inpath = os.path.join(DATA_PATH, "dists2","raw", "train")
-        outpath5 = os.path.join(DATA_PATH, "dists2", "processed5","train")
-        outpath1 = os.path.join(DATA_PATH, "dists2", "processed1","train")
-        process_distributions(inpath,outpath5,num_frame_skips=5)
-        process_distributions(inpath,outpath1,num_frame_skips=1)
+
+    if False:  # create arffs
+        ckpt_path = os.path.join(MODELS_PATH, "dim","downloaded_d128", "ckpts","model-108.pt")
+        data_path = os.path.join(DATA_PATH, "dists8", "raw", "test")
+        arff_path = os.path.join(DATA_PATH, "dists8", "raw", "dists8_mobilenet_downloaded_d128.arff")
+        model = getDIM(ckpt_path,device,128)
+        mobilenet = dict(model.named_children())["_encoder"]
+        modalities = (
+            "lidar",
+            "is_at_traffic_light",
+            "traffic_light_state",
+            "velocity",
+        )
+        CARLADataset.annotate_with_model(data_path, modalities, mobilenet, "mobilenet_downloaded_d128_e108",device=device)
+        CARLADataset.make_arff(data_path, arff_path,("mobilenet_downloaded_d128_e108",),"dists8_mobilenet_downloaded_d128_e108")
+        
+
+        ckpt_path = os.path.join(MODELS_PATH, "dim","downloaded_d64", "ckpts","model-96.pt")
+        data_path = os.path.join(DATA_PATH, "dists8", "raw", "test")
+        arff_path = os.path.join(DATA_PATH, "dists8", "raw", "dists8_mobilenet_downloaded_d64.arff")
+        model = getDIM(ckpt_path,device,64)
+        mobilenet = dict(model.named_children())["_encoder"]
+        modalities = (
+            "lidar",
+            "is_at_traffic_light",
+            "traffic_light_state",
+            "velocity",
+        )
+        CARLADataset.annotate_with_model(data_path, modalities, mobilenet, "mobilenet_downloaded_d64_e96",device=device)
+        CARLADataset.make_arff(data_path, arff_path,("mobilenet_downloaded_d64_e96",),"dists8_mobilenet_downloaded_d64_e96")
     
+    
+    if False:
+        root_path = os.path.join(DATA_PATH, "dists4", "raw", "test")
+        root_outpath = os.path.join(DATA_PATH, "dists4", "raw", "test_vis")
+        for dist in os.listdir(root_path):
+            dist_path = os.path.join(root_path, dist)
+            for episode in os.listdir(dist_path):
+                episode_path = os.path.join(dist_path, episode)
+                outpath = os.path.join(root_outpath, dist, episode)
+                visualize_raw_rgb(path=episode_path, outpath=outpath)
+    
+    if True:  # get gifs
+        sensor = "lidar"
+        root_path = os.path.join(DATA_PATH, "dists6", "raw", "test")
+        for dist in os.listdir(root_path):
+            dist_path = os.path.join(root_path, dist, "vis")
+            if os.path.isdir(dist_path):
+                episode = os.listdir(dist_path)[0]
+                episode_path = os.path.join(dist_path, episode)
+                rgb_path = os.path.join(episode_path, sensor)
+                gif_path = os.path.join(root_path, dist+"_"+sensor+".gif")
+                imgs_to_gif(rgb_path, gif_path, sensor, start=1300, end=1400)
