@@ -245,7 +245,8 @@ class CARLADataset(Dataset):
       future_length: int = 80,
       past_length: int = 20,
       num_frame_skips: int = 5,
-      ordered = True
+      ordered = True,
+      eps: float = 0.01,
   ) -> None:
     """Converts a raw dataset to demonstrations for imitation learning.  # adds player future and player past (local locations)
 
@@ -255,6 +256,8 @@ class CARLADataset(Dataset):
       future_length: The length of the future trajectory.
       past_length: The length of the past trajectory.
       num_frame_skips: The number of frames to skip.
+      ordered: flag, if True, processed data also has order and is saved as an epsiode with metadata
+      eps: the minim distance that needs to be moved before a new frame is accepted in the processed data
     """
     from oatomobile.utils import carla as cutil
 
@@ -280,16 +283,30 @@ class CARLADataset(Dataset):
 
       # Always keep `past_length+future_length+1` files open.
       assert len(sequence) >= past_length + future_length + 1
+      old_location = None
       for i in tqdm.trange(
           past_length,
           len(sequence) - future_length,
           num_frame_skips,
       ):
         try:
+
+
           # Player context/observation.
           observation = episode.read_sample(sample_token=sequence[i])
           current_location = observation["location"]
           current_rotation = observation["rotation"]
+
+          if old_location is None:
+            old_location = current_location
+            distance = np.inf
+          else:
+            distance = np.sum((current_location - old_location)**2)**0.5
+          #print(distance)
+          if distance < eps:  # we didn't move
+            continue
+          else:
+            old_location = current_location
 
           # Build past trajectory.
           player_past = list()

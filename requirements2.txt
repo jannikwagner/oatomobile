@@ -52,7 +52,6 @@ rsa==4.6
 scikit-image==0.15.0
 scipy==1.4.1
 seaborn==0.9.1
-six @ file:///home/linux1/recipes/ci/six_1610970791821/work
 tabulate==0.8.7
 tensorboard==1.14.0
 tensorboard-plugin-wit==1.7.0
@@ -62,7 +61,6 @@ tqdm==4.53.0
 transforms3d==0.3.1
 typed-ast==1.1.0
 urllib3==1.26.2
-Werkzeug @ file:///home/ktietz/src/ci/werkzeug_1611932622770/work
 wget==3.2
 wrapt==1.10.11
 zipp==1.2.0
