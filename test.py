@@ -236,18 +236,15 @@ def test_annotate_no_corruption():
                     print()
 
 if __name__=="__main__":
-    if False:  # generate dists5
-        root_path = os.path.join(DATA_PATH, "dists7", "raw","val",)
-        generate_distributions(root_path, n_frames=2000, n_episodes=5,end=10)
+    if False:  # generate dists
+        root_path = os.path.join(DATA_PATH, "dists7.3", "raw","train",)
+        generate_distributions(root_path, n_frames=2000, n_episodes=50)
         # root_path = os.path.join(DATA_PATH, "dists7", "raw","train")
         # generate_distributions(root_path, n_frames=2000, n_episodes=50)
 
-    if False:
-        raw_path = os.path.join(DATA_PATH, "dists7", "raw","val",)
-        processed_path = os.path.join(DATA_PATH, "dists7", "processed5","val",)
-        process_distributions(raw_path, processed_path,num_frame_skips=5)
-        raw_path = os.path.join(DATA_PATH, "dists7", "raw","train",)
-        processed_path = os.path.join(DATA_PATH, "dists7", "processed5","train",)
+    if True:
+        raw_path = os.path.join(DATA_PATH, "dists7.3", "raw","train",)
+        processed_path = os.path.join(DATA_PATH, "dists7.3", "processed5","train",)
         process_distributions(raw_path, processed_path,num_frame_skips=5)
 
     if False:  # create test distributions
@@ -273,8 +270,9 @@ if __name__=="__main__":
             )
         agent_fn = AutopilotAgent
         for i, (town, weather, n) in enumerate(dists):
-            path = os.path.join(root_path, str(i)+"_"+town+weather+str(n))
-            collect_not_moving_counts(town, path, n, n, n_frames, sensors, agent_fn, weather)
+            if True:
+                path = os.path.join(root_path, str(i)+"_"+town+weather+str(n))
+                collect_not_moving_counts(town, path, n, n, n_frames, sensors, agent_fn, weather)
 
     if False:  # create arffs
         ckpt_path = os.path.join(MODELS_PATH, "dim","downloaded_d128", "ckpts","model-108.pt")
@@ -306,6 +304,22 @@ if __name__=="__main__":
         CARLADataset.annotate_with_model(data_path, modalities, mobilenet, "mobilenet_downloaded_d64_e96",device=device)
         CARLADataset.make_arff(data_path, arff_path,("mobilenet_downloaded_d64_e96",),"dists8_mobilenet_downloaded_d64_e96")
     
+
+        ckpt_path = os.path.join(MODELS_PATH, "dim","dists7_d64", "ckpts","model-200.pt")
+        data_path = os.path.join(DATA_PATH, "dists8", "raw", "test")
+        arff_path = os.path.join(DATA_PATH, "dists8", "raw", "dists8_mobilenet_dists7_d64.arff")
+        model = getDIM(ckpt_path,device,64)
+        mobilenet = dict(model.named_children())["_encoder"]
+        modalities = (
+            "lidar",
+            "is_at_traffic_light",
+            "traffic_light_state",
+            "velocity",
+        )
+        CARLADataset.annotate_with_model(data_path, modalities, mobilenet, "mobilenet_dists7_d64_e200",device=device)
+        CARLADataset.make_arff(data_path, arff_path,("mobilenet_dists7_d64_e200",),"dists8_mobilenet_dists7_d64_e200")
+        
+    
     
     if False:
         root_path = os.path.join(DATA_PATH, "dists4", "raw", "test")
@@ -317,7 +331,7 @@ if __name__=="__main__":
                 outpath = os.path.join(root_outpath, dist, episode)
                 visualize_raw_rgb(path=episode_path, outpath=outpath)
     
-    if True:  # get gifs
+    if False:  # get gifs
         sensor = "lidar"
         root_path = os.path.join(DATA_PATH, "dists6", "raw", "test")
         for dist in os.listdir(root_path):

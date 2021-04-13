@@ -883,7 +883,7 @@ def get_npz_files(dataset_dir: str, recursive=True):
   listdir = [os.path.join(dataset_dir, x) for x in original_listdir]
   npz_files = []
   if recursive:
-    subdirs = [x for x in listdir if os.path.isdir(x)]
+    subdirs = [x for x in sorted(listdir) if os.path.isdir(x)]
     datasets = [get_npz_files(x) for x in subdirs]
     for subdir_files in datasets:
       npz_files.extend(subdir_files)

@@ -70,7 +70,7 @@ def minFDE(samples: List[torch.Tensor], ground_truth: torch.Tensor):
     samples_FDE = [FDE(sample, ground_truth) for sample in samples]
     return torch.stack(samples_FDE).min(axis=0)[0]
 
-def evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=128):
+def evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=128,num_batches=np.inf):
     model = getDIM(ckpt_path, device, mobilenet_num_classes)
     modalities = (
         "lidar",
@@ -103,28 +103,29 @@ def evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=128):
     torch.cuda.empty_cache()
     with tqdm.tqdm(dataloader) as pbar:
         for i, batch in enumerate(pbar):  # gives errors with num_workers > 1
-            # Prepares the batch.
+            #if True:
+                # Prepares the batch.
 
-            batch = transform(model, batch, device)
-            ground_truth = batch["player_future"]
-            y_samples = [model.sample(**batch).detach() for _ in range(k)]
-            minADE_ks.append(minADE(y_samples, ground_truth))
-            minFDE_ks.append(minFDE(y_samples, ground_truth))
-            del y_samples
-            y_mean = model.mean(**batch).detach()
-            ADE_ms.append(ADE(y_mean, ground_truth))
-            FDE_ms.append(FDE(y_mean, ground_truth))
-            del y_mean
-            y_10 = model.forward(10,**batch).detach()
-            y_100 = model.forward(100,**batch).detach()
-            ADE_10s.append(ADE(y_10, ground_truth))
-            ADE_100s.append(ADE(y_100, ground_truth))
-            FDE_10s.append(FDE(y_10, ground_truth))
-            FDE_100s.append(FDE(y_100, ground_truth))
-            if i == 20:
-                break
+                batch = transform(model, batch, device)
+                ground_truth = batch["player_future"]
+                y_samples = [model.sample(**batch).detach() for _ in range(k)]
+                minADE_ks.append(minADE(y_samples, ground_truth))
+                minFDE_ks.append(minFDE(y_samples, ground_truth))
+                del y_samples
+                y_mean = model.mean(**batch).detach()
+                ADE_ms.append(ADE(y_mean, ground_truth))
+                FDE_ms.append(FDE(y_mean, ground_truth))
+                del y_mean
+                y_10 = model.forward(10,**batch).detach()
+                y_100 = model.forward(100,**batch).detach()
+                ADE_10s.append(ADE(y_10, ground_truth))
+                ADE_100s.append(ADE(y_100, ground_truth))
+                FDE_10s.append(FDE(y_10, ground_truth))
+                FDE_100s.append(FDE(y_100, ground_truth))
+                if i >= num_batches-1:  # i skip the last batch since it could be of different size, could also just use something else than stack...
+                    break
     measure_lists = ADE_ms,ADE_10s,ADE_100s,minADE_ks,FDE_ms,FDE_10s,FDE_100s,minFDE_ks
-    measures = [torch.stack(measure).mean().item() for measure in measure_lists]
+    measures = [torch.cat(measure, 0).mean().item() for measure in measure_lists]
     ADE_m,ADE_10,ADE_100,minADE_k,FDE_m,FDE_10,FDE_100,minFDE_k = measures
     names = "ADE_m","ADE_10","ADE_100","minADE_k","FDE_m","FDE_10","FDE_100","minFDE_k"
     vals = [[val] for val in measures]
@@ -132,13 +133,17 @@ def evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=128):
     df.to_csv(output_path)
 
 if __name__ == "__main__":
-    ckpt_path = os.path.join(MODELS_PATH, "dim","dists2_skip5_d64", "ckpts","model-196.pt")
+    ckpt_path = os.path.join(MODELS_PATH, "dim","dists7.2_d32", "ckpts","model-200.pt")
     data_path = os.path.join(DATA_PATH, "downloaded", "processed", "val")
-    output_path = os.path.join(MODELS_PATH, "dim", "dists2_skip5_d64", "eval_196.csv")
-    evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=64)
+    output_path = os.path.join(MODELS_PATH, "dim", "dists7.2_d32", "eval_downloaded_200.csv")
+    evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=32,num_batches=20)
 
-    ckpt_path = os.path.join(MODELS_PATH, "dim","dists2_skip1_d64", "ckpts","model-12.pt")
-    data_path = os.path.join(DATA_PATH, "downloaded", "processed", "val")
-    output_path = os.path.join(MODELS_PATH, "dim", "dists2_skip1_d64", "eval_12.csv")
-    evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=64)
+    ckpt_path = os.path.join(MODELS_PATH, "dim","dists7.2_d32", "ckpts","model-200.pt")
+    data_path_root = os.path.join(DATA_PATH, "dists7", "processed5", "val")
+    output_path_raw = os.path.join(MODELS_PATH, "dim", "dists7.2_d32", "eval_dists7_{}_200.csv")
+    for dist in os.listdir(data_path_root):
+        data_path = os.path.join(data_path_root, dist)
+        output_path = output_path_raw.format(dist)
+        evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=32)
+
     
