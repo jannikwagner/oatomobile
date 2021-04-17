@@ -133,14 +133,22 @@ def evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=128,num_ba
     df.to_csv(output_path)
 
 if __name__ == "__main__":
-    ckpt_path = os.path.join(MODELS_PATH, "dim","dists7.2_d32", "ckpts","model-200.pt")
+    ckpt_path = os.path.join(MODELS_PATH, "dim","dists7.2_moving_d32", "ckpts","model-40.pt")
     data_path = os.path.join(DATA_PATH, "downloaded", "processed", "val")
-    output_path = os.path.join(MODELS_PATH, "dim", "dists7.2_d32", "eval_downloaded_200.csv")
+    output_path = os.path.join(MODELS_PATH, "dim", "dists7.2_mvoing_d32", "eval_downloaded_40.csv")
     evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=32,num_batches=20)
 
-    ckpt_path = os.path.join(MODELS_PATH, "dim","dists7.2_d32", "ckpts","model-200.pt")
-    data_path_root = os.path.join(DATA_PATH, "dists7", "processed5", "val")
-    output_path_raw = os.path.join(MODELS_PATH, "dim", "dists7.2_d32", "eval_dists7_{}_200.csv")
+    ckpt_path = os.path.join(MODELS_PATH, "dim","dists7.2_moving_d32", "ckpts","model-40.pt")
+    data_path_root = os.path.join(DATA_PATH, "dists7.2", "processed5_moving", "val")
+    output_path_raw = os.path.join(MODELS_PATH, "dim", "dists7.2_moving_d32", "eval_dists7.2_moving_{}_40.csv")
+    for dist in os.listdir(data_path_root):
+        data_path = os.path.join(data_path_root, dist)
+        output_path = output_path_raw.format(dist)
+        evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=32)
+
+    ckpt_path = os.path.join(MODELS_PATH, "dim","downloaded_d32", "ckpts","model-200.pt")
+    data_path_root = os.path.join(DATA_PATH, "dists7.2", "processed5_moving", "val")
+    output_path_raw = os.path.join(MODELS_PATH, "dim", "downloaded_d32", "eval_dists7.2_moving_{}_200.csv")
     for dist in os.listdir(data_path_root):
         data_path = os.path.join(data_path_root, dist)
         output_path = output_path_raw.format(dist)
