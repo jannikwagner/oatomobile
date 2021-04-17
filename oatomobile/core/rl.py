@@ -210,7 +210,7 @@ class SaveToDiskWrapper(gym.Wrapper):
     # Initializes a new episode.
     self._episode = Episode(self._output_dir, next(tokens))
     observation = self.env.reset(*args, **kwargs)
-    self._episode.append(**observation)
+    #self._episode.append(**observation)
     return observation
 
   def step(self, action: Action, *args: Any, **kwargs: Any) -> Transition:

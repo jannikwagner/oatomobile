@@ -40,6 +40,23 @@ from absl import logging
 
 import carla
 
+WEATHERS = {
+    "ClearNoon":carla.WeatherParameters.ClearNoon,
+    "ClearSunset":carla.WeatherParameters.ClearSunset,
+    "CloudyNoon":carla.WeatherParameters.CloudyNoon,
+    "CloudySunset":carla.WeatherParameters.CloudySunset,
+    "Default":carla.WeatherParameters.Default,
+    "HardRainNoon":carla.WeatherParameters.HardRainNoon,
+    "HardRainSunset":carla.WeatherParameters.HardRainSunset,
+    "MidRainSunset":carla.WeatherParameters.MidRainSunset,
+    "MidRainyNoon":carla.WeatherParameters.MidRainyNoon,
+    "SoftRainNoon":carla.WeatherParameters.SoftRainNoon,
+    "SoftRainSunset":carla.WeatherParameters.SoftRainSunset,
+    "WetCloudyNoon":carla.WeatherParameters.WetCloudyNoon,
+    "WetCloudySunset":carla.WeatherParameters.WetCloudySunset,
+    "WetNoon":carla.WeatherParameters.WetNoon,
+    "WetSunset":carla.WeatherParameters.WetSunset
+}
 
 def setup(
     town: str,
@@ -104,9 +121,9 @@ def setup(
       client.set_timeout(client_timeout)
       client.load_world(map_name=town)
       world = client.get_world()
-      if weather is None:
-        weather = carla.WeatherParameters.ClearNoon
-      world.set_weather(weather)  # pylint: disable=no-member
+      if weather not in WEATHERS:
+        weather = "ClearNoon"
+      world.set_weather(WEATHERS[weather])  # pylint: disable=no-member
       frame = world.apply_settings(
           carla.WorldSettings(  # pylint: disable=no-member
               no_rendering_mode=False,
@@ -459,15 +476,23 @@ def spawn_lane_invasion(
 
 def get_spawn_point(
     world: carla.World,  # pylint: disable=no-member
-    spawn_point: Optional[Union[int, carla.Transform]]  # pylint: disable=no-member
+    spawn_point: Optional[Union[int, carla.Transform]],  # pylint: disable=no-member
+    far_from: Optional[carla.Transform] = None
 ) -> carla.Location:  # pylint: disable=no-member
   """Parses and returns a CARLA spawn points."""
   if isinstance(spawn_point, carla.Transform):  # pylint: disable=no-member
     _spawn_point = spawn_point
   elif isinstance(spawn_point, int):
     _spawn_point = world.get_map().get_spawn_points()[spawn_point]
-  else:
+  elif far_from is None:  # chose point randomly
     _spawn_point = random.choice(world.get_map().get_spawn_points())
+  else:  # chose point with squared distance from far_from as probability
+    far_from_np = np.asarray([far_from.location.x, far_from.location.y, far_from.location.z])
+    spawn_points = world.get_map().get_spawn_points()
+    spawn_points_np = np.asarray([[p.location.x, p.location.y, p.location.z] for p in spawn_points])
+    weights = ((spawn_points_np - far_from_np[None, :])**2).sum(axis=1) + 0.1**10
+    weights = weights / weights.sum()
+    _spawn_point = np.random.choice(spawn_points, p=weights)
   return _spawn_point
 
 

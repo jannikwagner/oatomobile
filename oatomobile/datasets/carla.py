@@ -246,7 +246,8 @@ class CARLADataset(Dataset):
       future_length: int = 80,
       past_length: int = 20,
       num_frame_skips: int = 5,
-      ordered = True
+      ordered = True,
+      eps: float = 0.01,
   ) -> None:
     """Converts a raw dataset to demonstrations for imitation learning.  # adds player future and player past (local locations)
 
@@ -256,6 +257,8 @@ class CARLADataset(Dataset):
       future_length: The length of the future trajectory.
       past_length: The length of the past trajectory.
       num_frame_skips: The number of frames to skip.
+      ordered: flag, if True, processed data also has order and is saved as an epsiode with metadata
+      eps: the minim distance that needs to be moved before a new frame is accepted in the processed data
     """
     from oatomobile.utils import carla as cutil
 
@@ -281,16 +284,30 @@ class CARLADataset(Dataset):
 
       # Always keep `past_length+future_length+1` files open.
       assert len(sequence) >= past_length + future_length + 1
+      old_location = None
       for i in tqdm.trange(
           past_length,
           len(sequence) - future_length,
           num_frame_skips,
       ):
         try:
+
+
           # Player context/observation.
           observation = episode.read_sample(sample_token=sequence[i])
           current_location = observation["location"]
           current_rotation = observation["rotation"]
+
+          if old_location is None:
+            old_location = current_location
+            distance = np.inf
+          else:
+            distance = np.sum((current_location - old_location)**2)**0.5
+          #print(distance)
+          if distance < eps:  # we didn't move
+            continue
+          else:
+            old_location = current_location
 
           # Build past trajectory.
           player_past = list()
@@ -674,7 +691,7 @@ class CARLADataset(Dataset):
         """
         # Internalise hyperparameters.
         self._modalities = modalities
-        self.npz_files = get_npz_files(dataset_dir)
+        self._npz_files = get_npz_files(dataset_dir)
         self._transform = transform
         self._mode = mode
 
@@ -719,13 +736,14 @@ class CARLADataset(Dataset):
       model_name,
       transform: Optional[Callable[[Any], Any]] = None,
       mode: bool = False,
-      start=None,
-      end=None):
+      num_instances=None,
+      device="cpu",
+      recursive=True):
     from oatomobile.torch import transforms
     import torch
 
-    npz_files = get_npz_files(dataset_dir)
-    for npz_file in tqdm.tqdm(npz_files[start:end]):
+    npz_files = get_npz_files(dataset_dir,recursive)
+    for npz_file in tqdm.tqdm(npz_files[:num_instances]):
       # prepare sample
       sample = cls.load_datum(
           fname=npz_file,
@@ -756,8 +774,8 @@ class CARLADataset(Dataset):
                 visual_features=lidar,
                 output_shape=(100, 100),
             ))
-      
-      model_output = model(lidar)[0]
+      lidar = lidar.to(device)
+      model_output = model(lidar)[0].cpu()
 
       with np.load(
          npz_file,
@@ -780,7 +798,7 @@ class CARLADataset(Dataset):
       relation_name: str,
       comments: Optional[List[str]] = None,
       mode: bool = False,
-      recursive=False,
+      recursive=True,
       dataformat="HWC",
       num_timesteps_to_keep: int = 4,
       num_instances=None):
@@ -805,7 +823,7 @@ class CARLADataset(Dataset):
             value = observation[key]
             if isinstance(value, np.ndarray):
               for i in range(len(value.flat)):
-                arff_file.write("@ATTRIBUTE {}{} NUMERIC\n".format(key, i))
+                arff_file.write("@ATTRIBUTE {}_{} NUMERIC\n".format(key, i))
             elif isinstance(value, int) or isinstance(value, float):
                 arff_file.write("@ATTRIBUTE {} NUMERIC\n".format(key))
             else:
@@ -816,7 +834,7 @@ class CARLADataset(Dataset):
         arff_file.write(line)
 
   @classmethod
-  def car_not_moving_counts(cls, dataset_dir: str):
+  def car_not_moving_counts(cls, dataset_dir: str, eps=0.01):  # 0.001 seems to be a good threshold since standing cars often seem to move around 0.0005
     if dataset_dir[-1] == "/":
       dataset_dir = dataset_dir[:-1]
     dataset_dir, token = os.path.split(dataset_dir)
@@ -840,9 +858,11 @@ class CARLADataset(Dataset):
         observation = episode.read_sample(sample_token=sequence[i])
         current_location = observation["location"]
         current_rotation = observation["rotation"]
-        distance = np.sum(np.square(current_location - old_location))
-        #print(old_location, current_location, distance)
-        if distance < 0.0001: #and np.all(old_rotation == current_rotation):
+        if old_location is None:
+          old_location, old_rotation = current_location, current_rotation
+        distance = np.sum((current_location - old_location)**2)**0.5
+        #print(distance)
+        if distance < eps: #and old_rotation == current_rotation:
           counter += 1
         else:
           counts.append(counter)
@@ -850,9 +870,10 @@ class CARLADataset(Dataset):
           old_location = current_location
           old_rotation = current_rotation
         #print(i,":",counter)
-      except Exception as e:
-        print("Skipped", i, e)
-    counts.append(counter)
+      except:
+        print("Skipped", i)
+    if counter != 0:
+      counts.append(counter)
     return counts
       
 def get_observation_line(observation, modalities, round=10):
@@ -881,9 +902,8 @@ def get_npz_files(dataset_dir: str, recursive=True):
   global_listdir = [os.path.join(dataset_dir, x) for x in local_listdir]
   npz_files = []
   if recursive:
-    # look at contained folders
-    subdirs = [x for x in global_listdir if os.path.isdir(x)]
-    datasets = [get_npz_files(x, recursive) for x in subdirs]  # recursive access
+    subdirs = [x for x in sorted(listdir) if os.path.isdir(x)]
+    datasets = [get_npz_files(x) for x in subdirs]
     for subdir_files in datasets:
       npz_files.extend(subdir_files)
 

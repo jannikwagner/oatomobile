@@ -39,6 +39,7 @@ class ImitativeModel(nn.Module):
   def __init__(
       self,
       output_shape: types.Shape = (4, 2),
+      mobilenet_num_classes: int = 128,
   ) -> None:
     """Constructs a simple imitative model.
 
@@ -48,13 +49,14 @@ class ImitativeModel(nn.Module):
     """
     super(ImitativeModel, self).__init__()
     self._output_shape = output_shape
+    self._mobilenet_num_classes = mobilenet_num_classes
 
     # The convolutional encoder model.
-    self._encoder = MobileNetV2(num_classes=128, in_channels=2)
+    self._encoder = MobileNetV2(num_classes=mobilenet_num_classes, in_channels=2)
 
     # Merges the encoded features and the vector inputs.
     self._merger = MLP(
-        input_size=128 + 3 + 1 + 1,
+        input_size=mobilenet_num_classes + 3 + 1 + 1,
         output_sizes=[64, 64, 64],
         activation_fn=nn.ReLU,
         dropout_rate=None,
@@ -140,46 +142,12 @@ class ImitativeModel(nn.Module):
 
     return y
 
-  def sample(
-      self,
-      goal: Optional[torch.Tensor] = None,
-      **context: torch.Tensor) -> Union[torch.Tensor, Sequence[torch.Tensor]]:
-    """Returns a sample of a local mode from the posterior.
-
-    Args:
-      goal: The locations of the the goals.
-      context: (keyword arguments) The conditioning
-        variables used for the conditional flow.
-
-    Returns:
-      A mode from the posterior, with shape `[D, 2]`.
-    """
-    if not "visual_features" in context:
-      raise ValueError("Missing `visual_features` keyword argument.")
-    batch_size = context["visual_features"].shape[0]
-
-    # Sets initial sample to base distribution's mean.
-    x = self._decoder._base_dist.sample().clone().detach().repeat(
-        batch_size, 1).view(
-            batch_size,
-            *self._output_shape,
-        )
-
-    # The contextual parameters, caches for efficiency.
-    z = self._params(**context)
-
-    y, _ = self._decoder._forward(x=x, z=z)
-
-    return y
-
   def mean(
       self,
-      goal: Optional[torch.Tensor] = None,
       **context: torch.Tensor) -> Union[torch.Tensor, Sequence[torch.Tensor]]:
-    """Returns a sample of a local mode from the posterior.
+    """Returns a local mode from the posterior.
 
     Args:
-      goal: The locations of the the goals.
       context: (keyword arguments) The conditioning
         variables used for the conditional flow.
 
@@ -192,6 +160,36 @@ class ImitativeModel(nn.Module):
 
     # Sets initial sample to base distribution's mean.
     x = self._decoder._base_dist.mean.clone().detach().repeat(
+        batch_size, 1).view(
+            batch_size,
+            *self._output_shape,
+        )
+
+    # The contextual parameters, caches for efficiency.
+    z = self._params(**context)
+
+    y, _ = self._decoder._forward(x=x, z=z)
+
+    return y
+
+  def sample(
+      self,
+      **context: torch.Tensor) -> Union[torch.Tensor, Sequence[torch.Tensor]]:
+    """Returns a local mode from the posterior.
+
+    Args:
+      context: (keyword arguments) The conditioning
+        variables used for the conditional flow.
+
+    Returns:
+      A mode from the posterior, with shape `[D, 2]`.
+    """
+    if not "visual_features" in context:
+      raise ValueError("Missing `visual_features` keyword argument.")
+    batch_size = context["visual_features"].shape[0]
+
+    # Sets initial sample to base distribution's mean.
+    x = self._decoder._base_dist.sample().clone().detach().repeat(
         batch_size, 1).view(
             batch_size,
             *self._output_shape,

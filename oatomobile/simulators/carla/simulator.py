@@ -1671,14 +1671,16 @@ class CARLASimulator(simulator.Simulator):
     """Returns a reference to the spawn point."""
     if self._world is None:
       raise ValueError("Make sure the environment is reset first.")
-    return cutil.get_spawn_point(self._world, self._spawn_point)
+    self._spawn_point = cutil.get_spawn_point(self._world, self._spawn_point)
+    return self._spawn_point
 
   @property
   def destination(self) -> carla.Waypoint:  # pylint: disable=no-member
     """Returns a reference to the destination."""
     if self._world is None:
       raise ValueError("Make sure the environment is reset first.")
-    return cutil.get_spawn_point(self._world, self._destination)
+    self._destination = cutil.get_spawn_point(self._world, self._destination, self.spawn_point)  # far from spawn_point
+    return self._destination
 
   @property
   def sensor_suite(self) -> simulator.SensorSuite:
@@ -1743,6 +1745,9 @@ class CARLASimulator(simulator.Simulator):
             destination=self.destination,
         ) for sensor in self._sensors
     ])
+
+    print("spawn_point:", self._spawn_point.location.x,self._spawn_point.location.y)
+    print("destination:", self._destination.location.x, self._destination.location.y)
 
     # HACK(filangel): due to the bug with the lifted vehicle and
     # the LocalPlanner, perform K=50 steps in the simulator.
