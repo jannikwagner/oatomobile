@@ -1,7 +1,7 @@
 import os
 import torch
 
-os.environ["CARLA_ROOT"]=os.path.join(os.curdir,"carla")
+os.environ["CARLA_ROOT"]=os.path.join(os.getcwd(),"carla")
 
 PATH = os.path.join(os.getcwd())
 DATA_PATH = os.path.join(PATH, "data")
