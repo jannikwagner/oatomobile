@@ -247,7 +247,8 @@ class CARLADataset(Dataset):
       past_length: int = 20,
       num_frame_skips: int = 5,
       ordered = True,
-      eps: float = 0.01,
+      min_distance_since_last: float = 0.01,
+      min_distance_trajectory: float = 0.01,
   ) -> None:
     """Converts a raw dataset to demonstrations for imitation learning.  # adds player future and player past (local locations)
 
@@ -258,7 +259,7 @@ class CARLADataset(Dataset):
       past_length: The length of the past trajectory.
       num_frame_skips: The number of frames to skip.
       ordered: flag, if True, processed data also has order and is saved as an epsiode with metadata
-      eps: the minim distance that needs to be moved before a new frame is accepted in the processed data
+      min_dist_since_last: the minim distance that needs to be moved before a new frame is accepted in the processed data
     """
     from oatomobile.utils import carla as cutil
 
@@ -291,8 +292,6 @@ class CARLADataset(Dataset):
           num_frame_skips,
       ):
         try:
-
-
           # Player context/observation.
           observation = episode.read_sample(sample_token=sequence[i])
           current_location = observation["location"]
@@ -300,11 +299,11 @@ class CARLADataset(Dataset):
 
           if old_location is None:
             old_location = current_location
-            distance = np.inf
+            distance_since_last = np.inf
           else:
-            distance = np.sum((current_location - old_location)**2)**0.5
+            distance_since_last = np.sum((current_location - old_location)**2)**0.5
           #print(distance)
-          if distance < eps:  # we didn't move
+          if distance_since_last < min_distance_since_last:  # we didn't move
             continue
           else:
             old_location = current_location
@@ -340,6 +339,10 @@ class CARLADataset(Dataset):
               current_rotation=current_rotation,
               world_locations=player_future,
           )
+          distance_trajetory = np.sum((player_future[-1] - player_past[0])**2)**0.5
+          #print(distance_trajetory)
+          if distance_trajetory < min_distance_trajectory:
+            continue
 
           # Store to ouput directory.
           if ordered:

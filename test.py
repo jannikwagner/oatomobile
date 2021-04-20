@@ -213,13 +213,14 @@ def collect_not_moving_counts(town, output_dir, num_vehicles, num_pedestrains, n
             counts_file.write(str(counts))
         visualize_raw_rgb(path=newdir_path,outpath=vis_path,)
 
-def process_distributions(inpath=None, outpath=None, num_frame_skips=5):
+def process_distributions(inpath=None, outpath=None, num_frame_skips=5,min_distance_since_last=0.01,min_distance_trajectory=0.01):
     if inpath is None:
         inpath = os.path.join(DATA_PATH, "dists","raw", "train")
     if outpath is None:
         outpath = os.path.join(DATA_PATH, "dists", "processed","train")
     for dist in os.listdir(inpath):
-        CARLADataset.process(os.path.join(inpath, dist), os.path.join(outpath, dist), num_frame_skips=num_frame_skips)
+        CARLADataset.process(os.path.join(inpath, dist), os.path.join(outpath, dist),num_frame_skips=num_frame_skips,
+        min_distance_since_last=min_distance_since_last,min_distance_trajectory=min_distance_trajectory)
 
 def test_annotate_no_corruption():
     orig_path = os.path.join(DATA_PATH, "dists3", "raw", "0_Town01ClearNoon0","b78cf9653f3b4c4ab69f2fc60b4e05d1")
@@ -243,9 +244,15 @@ if __name__=="__main__":
         # generate_distributions(root_path, n_frames=2000, n_episodes=50)
 
     if True:
-        raw_path = os.path.join(DATA_PATH, "dists7.3", "raw","train",)
-        processed_path = os.path.join(DATA_PATH, "dists7.3", "processed5","train",)
-        process_distributions(raw_path, processed_path,num_frame_skips=5)
+        raw_path = os.path.join(DATA_PATH, "dists7.2", "raw","train","train1")
+        processed_path = os.path.join(DATA_PATH, "dists7.2", "processed5_moving2","train","train1")
+        process_distributions(raw_path, processed_path,num_frame_skips=5,min_distance_since_last=0,min_distance_trajectory=1)
+        raw_path = os.path.join(DATA_PATH, "dists7.2", "raw","train","train2")
+        processed_path = os.path.join(DATA_PATH, "dists7.2", "processed5_moving2","train","train2")
+        process_distributions(raw_path, processed_path,num_frame_skips=5,min_distance_since_last=0,min_distance_trajectory=1)
+        raw_path = os.path.join(DATA_PATH, "dists7.2", "raw","val")
+        processed_path = os.path.join(DATA_PATH, "dists7.2", "processed5_moving2","val")
+        process_distributions(raw_path, processed_path,num_frame_skips=5,min_distance_since_last=0,min_distance_trajectory=1)
 
     if False:  # create test distributions
         root_path = os.path.join(DATA_PATH,"dists8","raw","test")
