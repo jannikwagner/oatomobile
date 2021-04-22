@@ -23,6 +23,8 @@ from oatomobile.baselines.torch.dim.agent import DIMAgent
 import carla
 import itertools
 
+from evaluate import getDIM, get_agent_fn
+
 WEATHERS = {
     "ClearNoon":carla.WeatherParameters.ClearNoon,
     "ClearSunset":carla.WeatherParameters.ClearSunset,
@@ -41,8 +43,7 @@ WEATHERS = {
     "WetSunset":carla.WeatherParameters.WetSunset
 }
 
-
-def test_data_gen(sensors=(
+ALL_SENSORS = (
         "acceleration",
         "velocity",
         "lidar",
@@ -55,7 +56,9 @@ def test_data_gen(sensors=(
         "right_camera_rgb",
         "bird_view_camera_rgb",
         "bird_view_camera_cityscapes",
-        ),
+        )
+
+def test_data_gen(sensors=ALL_SENSORS,
         agent_fn=AutopilotAgent,
         path=os.path.join(DATA_PATH, "dim")):
     """
@@ -187,12 +190,12 @@ def generate_distributions(root_path=None,sensors=None,n_frames=2000,n_episodes=
     if n_ped_cars is None:
         n_ped_cars = (0, 50)
     if towns is None:
-        towns = ("Town01", "Town02")
+        towns = ("Town01", "Town03")
     for weather, n, town, i in tqdm.tqdm(list(itertools.product(weathers, n_ped_cars, towns, range(n_episodes)))[start:end]):
         path = os.path.join(root_path, town+weather+str(n))
         collect_not_moving_counts(town, path, n, n, n_frames, sensors, agent_fn, weather)
 
-def collect_not_moving_counts(town, output_dir, num_vehicles, num_pedestrains, n_frames, sensors, agent_fn, weather,visualize=True):
+def collect_not_moving_counts(town, output_dir, num_vehicles, num_pedestrains, n_frames, sensors, agent_fn, weather,visualize=True,max_not_moving=0.5,max_not_moving_end=0.4):
     while True:
         os.makedirs(output_dir, exist_ok=True)
         listdir = os.listdir(output_dir)
@@ -201,7 +204,7 @@ def collect_not_moving_counts(town, output_dir, num_vehicles, num_pedestrains, n
         newdir_path = os.path.join(output_dir, newdir)
         counts = CARLADataset.car_not_moving_counts(newdir_path)
         print(counts)
-        if 0.5*sum(counts) < n_frames and counts[-1] < 0.4*n_frames:
+        if sum(counts) < max_not_moving*n_frames and counts[-1] < max_not_moving_end*n_frames:
             break
         shutil.rmtree(newdir_path)
         print("repeat",weather, num_vehicles, town)
@@ -238,29 +241,37 @@ def test_annotate_no_corruption():
 
 if __name__=="__main__":
     if False:  # generate dists
-        root_path = os.path.join(DATA_PATH, "dists7.3", "raw","train",)
-        generate_distributions(root_path, n_frames=2000, n_episodes=50)
+        root_path = os.path.join(DATA_PATH, "dists10", "raw", "train",)
+        generate_distributions(root_path, n_frames=2000, n_episodes=100)
+        root_path = os.path.join(DATA_PATH, "dists10", "raw", "val",)
+        generate_distributions(root_path, n_frames=2000, n_episodes=5)
         # root_path = os.path.join(DATA_PATH, "dists7", "raw","train")
         # generate_distributions(root_path, n_frames=2000, n_episodes=50)
 
     if True:
-        raw_path = os.path.join(DATA_PATH, "dists7.2", "raw","train","train1")
-        processed_path = os.path.join(DATA_PATH, "dists7.2", "processed5_moving2","train","train1")
-        process_distributions(raw_path, processed_path,num_frame_skips=5,min_distance_since_last=0,min_distance_trajectory=1)
-        raw_path = os.path.join(DATA_PATH, "dists7.2", "raw","train","train2")
-        processed_path = os.path.join(DATA_PATH, "dists7.2", "processed5_moving2","train","train2")
-        process_distributions(raw_path, processed_path,num_frame_skips=5,min_distance_since_last=0,min_distance_trajectory=1)
-        raw_path = os.path.join(DATA_PATH, "dists7.2", "raw","val")
-        processed_path = os.path.join(DATA_PATH, "dists7.2", "processed5_moving2","val")
-        process_distributions(raw_path, processed_path,num_frame_skips=5,min_distance_since_last=0,min_distance_trajectory=1)
+        # raw_path = os.path.join(DATA_PATH, "dists7.2", "raw","train","train1")
+        # processed_path = os.path.join(DATA_PATH, "dists7.2", "processed5_moving3","train","train1")
+        # process_distributions(raw_path, processed_path,num_frame_skips=5,min_distance_since_last=0,min_distance_trajectory=20)
+        # raw_path = os.path.join(DATA_PATH, "dists7.2", "raw","train","train2")
+        # processed_path = os.path.join(DATA_PATH, "dists7.2", "processed5_moving3","train","train2")
+        # process_distributions(raw_path, processed_path,num_frame_skips=5,min_distance_since_last=0,min_distance_trajectory=20)
+        # raw_path = os.path.join(DATA_PATH, "dists7.2", "raw","val")
+        # processed_path = os.path.join(DATA_PATH, "dists7.2", "processed5_moving3","val")
+        # process_distributions(raw_path, processed_path,num_frame_skips=5,min_distance_since_last=0,min_distance_trajectory=20)
+
+        raw_path = os.path.join(DATA_PATH, "dists10", "raw","train")
+        processed_path = os.path.join(DATA_PATH, "dists10", "processed5","train")
+        process_distributions(raw_path, processed_path,num_frame_skips=5,min_distance_since_last=0,min_distance_trajectory=0)
+        # raw_path = os.path.join(DATA_PATH, "dists10", "raw","val")
+        # processed_path = os.path.join(DATA_PATH, "dists10", "processed5","val")
+        # process_distributions(raw_path, processed_path,num_frame_skips=5,min_distance_since_last=0,min_distance_trajectory=0)
 
     if False:  # create test distributions
-        root_path = os.path.join(DATA_PATH,"dists8","raw","test")
+        root_path = os.path.join(DATA_PATH,"dists9","raw","test")
         d0 = ["Town01","ClearNoon",0]
-        d1 = ["Town02","HardRainNoon",50]
-        d2 = ["Town03","WetCloudySunset",0]
-        dist_list = [d0,d1,d2]
-        dists = [d0,d1,d2,d0,d1,d0,d2,d1,d2,d0,d0,d1,d2,d0,d1,d0,d2,d1,d2,d0]
+        d1 = ["Town03","HardRainNoon",50]
+        dist_list = [d0,d1]
+        dists = [d0,d0,d1,d1,d0,d0,d1,d1]
         n_frames=2000
         os.makedirs(root_path, exist_ok=True)
         target = list(np.asarray([[dist_list.index(d)]*n_frames for d in dists]).flat)
@@ -349,3 +360,42 @@ if __name__=="__main__":
                 rgb_path = os.path.join(episode_path, sensor)
                 gif_path = os.path.join(root_path, dist+"_"+sensor+".gif")
                 imgs_to_gif(rgb_path, gif_path, sensor, start=1300, end=1400)
+
+    if False:
+        n_frames = 2000
+
+        ckpt_path = os.path.join(MODELS_PATH, "dim","dists7.2_d32", "ckpts","model-200.pt")
+        dim=getDIM(ckpt_path,device=device,mobilenet_num_classes=32)
+        agent_fn = get_agent_fn(dim)
+        data_path = os.path.join(DATA_PATH, "test_dim3", "dists7.2_moving_d32")
+        collect_not_moving_counts("Town01", data_path,50,50,n_frames,ALL_SENSORS,agent_fn,"ClearNoon",True,1,1)
+
+        # ckpt_path = os.path.join(MODELS_PATH, "dim","dists7.2_moving_d32", "ckpts","model-40.pt")
+        # dim=getDIM(ckpt_path,device=device,mobilenet_num_classes=32)
+        # agent_fn = get_agent_fn(dim)
+        # data_path = os.path.join(DATA_PATH, "test_dim3", "dists7.2_moving_d32")
+        # collect_not_moving_counts("Town01", data_path,50,50,n_frames,ALL_SENSORS,agent_fn,"ClearNoon",True,1,1)
+
+        # ckpt_path = os.path.join(MODELS_PATH, "dim","dists7.2_moving2_d32", "ckpts","model-100.pt")
+        # dim=getDIM(ckpt_path,device=device,mobilenet_num_classes=32)
+        # agent_fn = get_agent_fn(dim)
+        # data_path = os.path.join(DATA_PATH, "test_dim3", "dists7.2_moving2_d32")
+        # collect_not_moving_counts("Town01", data_path,50,50,n_frames,ALL_SENSORS,agent_fn,"ClearNoon",True,1,1)
+
+        # ckpt_path = os.path.join(MODELS_PATH, "dim","dists7.2_moving3_d32", "ckpts","model-100.pt")
+        # dim=getDIM(ckpt_path,device=device,mobilenet_num_classes=32)
+        # agent_fn = get_agent_fn(dim)
+        # data_path = os.path.join(DATA_PATH, "test_dim3", "dists7.2_moving3_d32")
+        # collect_not_moving_counts("Town01", data_path,50,50,n_frames,ALL_SENSORS,agent_fn,"ClearNoon",True,1,1)
+
+        # ckpt_path = os.path.join(MODELS_PATH, "dim","downloaded_d32", "ckpts","model-200.pt")
+        # dim=getDIM(ckpt_path,device=device,mobilenet_num_classes=32)
+        # agent_fn = get_agent_fn(dim)
+        # data_path = os.path.join(DATA_PATH, "test_dim3", "downloaded_d32")
+        # collect_not_moving_counts("Town01", data_path,50,50,n_frames,ALL_SENSORS,agent_fn,"ClearNoon",True,1,1)
+
+        # ckpt_path = None
+        # dim=getDIM(ckpt_path,device=device,mobilenet_num_classes=32)
+        # agent_fn = get_agent_fn(dim)
+        # data_path = os.path.join(DATA_PATH, "test_dim3", "untrained")
+        # collect_not_moving_counts("Town01", data_path,50,50,n_frames,ALL_SENSORS,agent_fn,"ClearNoon",True,1,1)

@@ -83,7 +83,7 @@ flags.DEFINE_bool(
 )
 flags.DEFINE_integer(
     name="cuda_train_idx",
-    default=2,
+    default=0,
     help="The index of the graphics card to be used for training.",
 )
 flags.DEFINE_integer(

@@ -26,11 +26,10 @@ import pandas as pd
 
 
 def getDIM(path=None,device="cpu", mobilenet_num_classes=128) -> ImitativeModel:
-    if path is None:
-        path = os.path.join(MODELS_PATH, "dim", "9", "ckpts", "model-96.pt")
     model = ImitativeModel(mobilenet_num_classes=mobilenet_num_classes)
-    x = torch.load(path)
-    model.load_state_dict(x)
+    if path is not None:
+        x = torch.load(path)
+        model.load_state_dict(x)
     model.eval().to(device)
     return model
 
@@ -133,25 +132,50 @@ def evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=128,num_ba
     df.to_csv(output_path)
 
 if __name__ == "__main__":
-    ckpt_path = os.path.join(MODELS_PATH, "dim","dists7.2_moving_d32", "ckpts","model-40.pt")
-    data_path = os.path.join(DATA_PATH, "downloaded", "processed", "val")
-    output_path = os.path.join(MODELS_PATH, "dim", "dists7.2_mvoing_d32", "eval_downloaded_40.csv")
-    evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=32,num_batches=20)
+    # # dists on downloaded
+    # ckpt_path = os.path.join(MODELS_PATH, "dim","dists7.2_moving3_d32", "ckpts","model-100.pt")
+    # data_path = os.path.join(DATA_PATH, "downloaded", "processed", "val")
+    # output_path = os.path.join(MODELS_PATH, "dim", "dists7.2_moving3_d32", "eval_downloaded_100.csv")
+    # evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=32,num_batches=20)
 
-    ckpt_path = os.path.join(MODELS_PATH, "dim","dists7.2_moving_d32", "ckpts","model-40.pt")
-    data_path_root = os.path.join(DATA_PATH, "dists7.2", "processed5_moving", "val")
-    output_path_raw = os.path.join(MODELS_PATH, "dim", "dists7.2_moving_d32", "eval_dists7.2_moving_{}_40.csv")
-    for dist in os.listdir(data_path_root):
-        data_path = os.path.join(data_path_root, dist)
-        output_path = output_path_raw.format(dist)
-        evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=32)
+    # dists on dists
+    ckpt_path = os.path.join(MODELS_PATH, "dim","dists7.2_d32", "ckpts","model-200.pt")
+    data_path_root = os.path.join(DATA_PATH, "dists7.2", "processed5", "val")
+    output_path_raw = os.path.join(MODELS_PATH, "dim", "dists7.2_d32", "eval_dists7.2_{}_200.csv")
+    # for dist in os.listdir(data_path_root):
+    #     data_path = os.path.join(data_path_root, dist)
+    #     output_path = output_path_raw.format(dist)
+    #     evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=32)
+    evaluate(ckpt_path, data_path_root, output_path_raw.format("all"), mobilenet_num_classes=32,num_batches=20)
 
-    ckpt_path = os.path.join(MODELS_PATH, "dim","downloaded_d32", "ckpts","model-200.pt")
-    data_path_root = os.path.join(DATA_PATH, "dists7.2", "processed5_moving", "val")
-    output_path_raw = os.path.join(MODELS_PATH, "dim", "downloaded_d32", "eval_dists7.2_moving_{}_200.csv")
-    for dist in os.listdir(data_path_root):
-        data_path = os.path.join(data_path_root, dist)
-        output_path = output_path_raw.format(dist)
-        evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=32)
+    # ckpt_path = os.path.join(MODELS_PATH, "dim","dists7.2_moving_d32", "ckpts","model-40.pt")
+    # data_path_root = os.path.join(DATA_PATH, "dists7.2", "processed5_moving", "val")
+    # output_path_raw = os.path.join(MODELS_PATH, "dim", "dists7.2_moving_d32", "eval_dists7.2_moving_{}_40.csv")
+    # for dist in os.listdir(data_path_root):
+    #     data_path = os.path.join(data_path_root, dist)
+    #     output_path = output_path_raw.format(dist)
+    #     evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=32)
+    # evaluate(ckpt_path, data_path_root, output_path_raw.format("all"), mobilenet_num_classes=32,num_batches=20)
 
+    # # dowloaded on dists
+    # ckpt_path = os.path.join(MODELS_PATH, "dim","downloaded_d32", "ckpts","model-200.pt")
+    # data_path_root = os.path.join(DATA_PATH, "dists7.2", "processed5_moving3", "val")
+    # output_path_raw = os.path.join(MODELS_PATH, "dim", "downloaded_d32", "eval_dists7.2_moving3_{}_200.csv")
+    # for dist in os.listdir(data_path_root):
+    #     data_path = os.path.join(data_path_root, dist)
+    #     output_path = output_path_raw.format(dist)
+    #     evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=32)
+    # evaluate(ckpt_path, data_path_root, output_path_raw.format("all"), mobilenet_num_classes=32,num_batches=20)
+
+    # # downloaded on downloaded
+    # ckpt_path = os.path.join(MODELS_PATH, "dim","downloaded_d32", "ckpts","model-100.pt")
+    # data_path = os.path.join(DATA_PATH, "downloaded", "processed", "val")
+    # output_path = os.path.join(MODELS_PATH, "dim", "downloaded_d32", "eval_downloaded_100.csv")
+    # evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=32,num_batches=20)
+
+    # # downloaded on downloaded
+    # ckpt_path = os.path.join(MODELS_PATH, "dim","downloaded_d32", "ckpts","model-4.pt")
+    # data_path = os.path.join(DATA_PATH, "downloaded", "processed", "val")
+    # output_path = os.path.join(MODELS_PATH, "dim", "downloaded_d32", "eval_downloaded_4.csv")
+    # evaluate(ckpt_path, data_path, output_path, mobilenet_num_classes=32,num_batches=20)
     
