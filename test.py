@@ -204,10 +204,11 @@ def collect_not_moving_counts(town, output_dir, num_vehicles, num_pedestrains, n
         newdir_path = os.path.join(output_dir, newdir)
         counts = CARLADataset.car_not_moving_counts(newdir_path)
         print(counts)
-        if sum(counts) < max_not_moving*n_frames and counts[-1] < max_not_moving_end*n_frames:
-            break
-        shutil.rmtree(newdir_path)
-        print("repeat",weather, num_vehicles, town)
+        if np.sum(counts) > max_not_moving*n_frames or counts[-1] > max_not_moving_end*n_frames:
+            shutil.rmtree(newdir_path)
+            print("repeat",weather, num_vehicles, town)
+            continue
+        break
 
     if visualize:
         vis_path = os.path.join(output_dir,"vis",newdir)
@@ -239,6 +240,15 @@ def test_annotate_no_corruption():
                     print(mod_file[key])
                     print()
 
+def test_get_npz(path,outpath):
+    os.makedirs(outpath,exist_ok=True)
+    files = get_npz_files(path)
+    for i in range(len(files)):
+        x = dict(np.load(files[i]))
+        img = x["front_camera_rgb"]
+        plt.imsave(os.path.join(outpath,str(i)+".png"),img)
+
+
 if __name__=="__main__":
     if False:  # generate dists
         root_path = os.path.join(DATA_PATH, "dists10", "raw", "train",)
@@ -248,7 +258,7 @@ if __name__=="__main__":
         # root_path = os.path.join(DATA_PATH, "dists7", "raw","train")
         # generate_distributions(root_path, n_frames=2000, n_episodes=50)
 
-    if True:
+    if False:
         # raw_path = os.path.join(DATA_PATH, "dists7.2", "raw","train","train1")
         # processed_path = os.path.join(DATA_PATH, "dists7.2", "processed5_moving3","train","train1")
         # process_distributions(raw_path, processed_path,num_frame_skips=5,min_distance_since_last=0,min_distance_trajectory=20)
@@ -260,19 +270,19 @@ if __name__=="__main__":
         # process_distributions(raw_path, processed_path,num_frame_skips=5,min_distance_since_last=0,min_distance_trajectory=20)
 
         raw_path = os.path.join(DATA_PATH, "dists10", "raw","train")
-        processed_path = os.path.join(DATA_PATH, "dists10", "processed5","train")
-        process_distributions(raw_path, processed_path,num_frame_skips=5,min_distance_since_last=0,min_distance_trajectory=0)
-        # raw_path = os.path.join(DATA_PATH, "dists10", "raw","val")
-        # processed_path = os.path.join(DATA_PATH, "dists10", "processed5","val")
-        # process_distributions(raw_path, processed_path,num_frame_skips=5,min_distance_since_last=0,min_distance_trajectory=0)
+        processed_path = os.path.join(DATA_PATH, "dists10", "processed5_movingl0.01","train")
+        process_distributions(raw_path, processed_path,num_frame_skips=5,min_distance_since_last=0.01,min_distance_trajectory=0)
+        raw_path = os.path.join(DATA_PATH, "dists10", "raw","val")
+        processed_path = os.path.join(DATA_PATH, "dists10", "processed5_movingl0.01","val")
+        process_distributions(raw_path, processed_path,num_frame_skips=5,min_distance_since_last=0.01,min_distance_trajectory=0)
 
     if False:  # create test distributions
-        root_path = os.path.join(DATA_PATH,"dists9","raw","test")
+        root_path = os.path.join(DATA_PATH,"dists16","raw","test")
         d0 = ["Town01","ClearNoon",0]
         d1 = ["Town03","HardRainNoon",50]
         dist_list = [d0,d1]
-        dists = [d0,d0,d1,d1,d0,d0,d1,d1]
-        n_frames=2000
+        dists = [d0,d1,d0,d1,d0,d1,d0,d1,d0,d1,d0,d1,d0,d1,d0,d1]
+        n_frames=1000
         os.makedirs(root_path, exist_ok=True)
         target = list(np.asarray([[dist_list.index(d)]*n_frames for d in dists]).flat)
         with open(os.path.join(root_path, "target_dists.txt"),"w") as f:
@@ -288,15 +298,17 @@ if __name__=="__main__":
             )
         agent_fn = AutopilotAgent
         for i, (town, weather, n) in enumerate(dists):
-            if True:
+            if i in (1,3,15):
                 path = os.path.join(root_path, str(i)+"_"+town+weather+str(n))
-                collect_not_moving_counts(town, path, n, n, n_frames, sensors, agent_fn, weather)
+                collect_not_moving_counts(town, path, n, n, n_frames, sensors, agent_fn, weather,max_not_moving=0.1)
+
 
     if False:  # create arffs
-        ckpt_path = os.path.join(MODELS_PATH, "dim","downloaded_d128", "ckpts","model-108.pt")
-        data_path = os.path.join(DATA_PATH, "dists8", "raw", "test")
-        arff_path = os.path.join(DATA_PATH, "dists8", "raw", "dists8_mobilenet_downloaded_d128.arff")
-        model = getDIM(ckpt_path,device,128)
+        
+        ckpt_path = os.path.join(MODELS_PATH, "dim","dists10_d32", "ckpts","model-180.pt")
+        data_path = os.path.join(DATA_PATH, "dists16", "raw", "test")
+        arff_path = os.path.join(DATA_PATH, "dists16", "raw", "dists16_mobilenet_dists10_d32_e180.arff")
+        model = getDIM(ckpt_path,device,32)
         mobilenet = dict(model.named_children())["_encoder"]
         modalities = (
             "lidar",
@@ -304,38 +316,23 @@ if __name__=="__main__":
             "traffic_light_state",
             "velocity",
         )
-        CARLADataset.annotate_with_model(data_path, modalities, mobilenet, "mobilenet_downloaded_d128_e108",device=device)
-        CARLADataset.make_arff(data_path, arff_path,("mobilenet_downloaded_d128_e108",),"dists8_mobilenet_downloaded_d128_e108")
+        CARLADataset.annotate_with_model(data_path, modalities, mobilenet, "mobilenet_dists10_d32_e180",device=device)
+        CARLADataset.make_arff(data_path, arff_path,("mobilenet_dists10_d32_e180",),"dists16_mobilenet_dists10_d32_e180")
         
 
-        ckpt_path = os.path.join(MODELS_PATH, "dim","downloaded_d64", "ckpts","model-96.pt")
-        data_path = os.path.join(DATA_PATH, "dists8", "raw", "test")
-        arff_path = os.path.join(DATA_PATH, "dists8", "raw", "dists8_mobilenet_downloaded_d64.arff")
-        model = getDIM(ckpt_path,device,64)
-        mobilenet = dict(model.named_children())["_encoder"]
-        modalities = (
-            "lidar",
-            "is_at_traffic_light",
-            "traffic_light_state",
-            "velocity",
-        )
-        CARLADataset.annotate_with_model(data_path, modalities, mobilenet, "mobilenet_downloaded_d64_e96",device=device)
-        CARLADataset.make_arff(data_path, arff_path,("mobilenet_downloaded_d64_e96",),"dists8_mobilenet_downloaded_d64_e96")
-    
-
-        ckpt_path = os.path.join(MODELS_PATH, "dim","dists7_d64", "ckpts","model-200.pt")
-        data_path = os.path.join(DATA_PATH, "dists8", "raw", "test")
-        arff_path = os.path.join(DATA_PATH, "dists8", "raw", "dists8_mobilenet_dists7_d64.arff")
-        model = getDIM(ckpt_path,device,64)
-        mobilenet = dict(model.named_children())["_encoder"]
-        modalities = (
-            "lidar",
-            "is_at_traffic_light",
-            "traffic_light_state",
-            "velocity",
-        )
-        CARLADataset.annotate_with_model(data_path, modalities, mobilenet, "mobilenet_dists7_d64_e200",device=device)
-        CARLADataset.make_arff(data_path, arff_path,("mobilenet_dists7_d64_e200",),"dists8_mobilenet_dists7_d64_e200")
+        # ckpt_path = os.path.join(MODELS_PATH, "dim","dists10_d32", "ckpts","model-180.pt")
+        # data_path = os.path.join(DATA_PATH, "dists12", "raw", "test")
+        # arff_path = os.path.join(DATA_PATH, "dists12", "raw", "dists12_mobilenet_dists10_d32_e180.arff")
+        # model = getDIM(ckpt_path,device,32)
+        # mobilenet = dict(model.named_children())["_encoder"]
+        # modalities = (
+        #     "lidar",
+        #     "is_at_traffic_light",
+        #     "traffic_light_state",
+        #     "velocity",
+        # )
+        # CARLADataset.annotate_with_model(data_path, modalities, mobilenet, "mobilenet_dists10_d32_e180",device=device)
+        # CARLADataset.make_arff(data_path, arff_path,("mobilenet_dists10_d32_e180",),"dists12_mobilenet_dists10_d32_e180")
         
     
     
@@ -361,13 +358,13 @@ if __name__=="__main__":
                 gif_path = os.path.join(root_path, dist+"_"+sensor+".gif")
                 imgs_to_gif(rgb_path, gif_path, sensor, start=1300, end=1400)
 
-    if False:
+    if False:  # let model drive
         n_frames = 2000
 
-        ckpt_path = os.path.join(MODELS_PATH, "dim","dists7.2_d32", "ckpts","model-200.pt")
+        ckpt_path = os.path.join(MODELS_PATH, "dim","dists10_d32", "ckpts","model-144.pt")
         dim=getDIM(ckpt_path,device=device,mobilenet_num_classes=32)
         agent_fn = get_agent_fn(dim)
-        data_path = os.path.join(DATA_PATH, "test_dim3", "dists7.2_moving_d32")
+        data_path = os.path.join(DATA_PATH, "test_dim3", "dists10_d32")
         collect_not_moving_counts("Town01", data_path,50,50,n_frames,ALL_SENSORS,agent_fn,"ClearNoon",True,1,1)
 
         # ckpt_path = os.path.join(MODELS_PATH, "dim","dists7.2_moving_d32", "ckpts","model-40.pt")
@@ -399,3 +396,8 @@ if __name__=="__main__":
         # agent_fn = get_agent_fn(dim)
         # data_path = os.path.join(DATA_PATH, "test_dim3", "untrained")
         # collect_not_moving_counts("Town01", data_path,50,50,n_frames,ALL_SENSORS,agent_fn,"ClearNoon",True,1,1)
+
+    if True:
+        data_path = os.path.join(DATA_PATH, "dists13", "raw", "test")
+        out_path = os.path.join(DATA_PATH, "dists13", "raw", "imgs")
+        test_get_npz(data_path,out_path)
