@@ -34,6 +34,7 @@ from absl import logging
 
 from oatomobile.core.dataset import Dataset
 from oatomobile.core.dataset import Episode
+from oatomobile.torch.networks.perception import MobileNetV2
 from defaults import device
 
 
@@ -736,13 +737,26 @@ class CARLADataset(Dataset):
   def annotate_with_model(cls,
       dataset_dir: str,
       modalities: Sequence[str],
-      model,
-      model_name,
+      model: MobileNetV2,
+      model_name: str,
       transform: Optional[Callable[[Any], Any]] = None,
       mode: bool = False,
-      num_instances=None,
+      num_instances:int=None,
       device="cpu",
       recursive=True):
+    """add the ouput of a mobilenet to each frame of a dataset
+
+    Args:
+        dataset_dir (str): the root path of the dataset
+        modalities (Sequence[str]): the features of the data the models needs to see as inputs
+        model (MobileNetV2): the model whose outputs are added to the data
+        model_name (str): the name of the feature of the models outputs (should be name of the model)
+        transform (Optional[Callable[[Any], Any]], optional): optional transform of the data. Defaults to None.
+        mode (bool, optional): see load_datum. Defaults to False.
+        num_instances (int, optional): the number of frames that should be annotated (for debugging). Defaults to None.
+        device (str, optional): the device on which the model is stored. Defaults to "cpu".
+        recursive (bool, optional): whether the dataset should be loaded recursively (subdirectories as well). Defaults to True.
+    """
     from oatomobile.torch import transforms
     import torch
 
@@ -806,6 +820,26 @@ class CARLADataset(Dataset):
       dataformat="HWC",
       num_timesteps_to_keep: int = 4,
       num_instances=None):
+    """create an arff file from a dataset. Different episodes are appended lexicograhpically.
+    Different frames in an episode are appended in their order if the episode is ordered and lexicographically otherwise.
+
+    Args:
+        dataset_dir (str): the path of the dataset
+        outpath (str): the path of the to be saved arff file
+        modalities (Sequence[str]): a tuple of the features that should be stored in the arff file.
+          Multidimensional features (such as lidar sensor data) will be multiple columns in the arff file, one for each dimension.
+        relation_name (str): the name of the relation that will be set in the arff file
+        comments (Optional[List[str]], optional): optional comments in the header of the arff file. Defaults to None.
+        mode (bool, optional): If True, datums are labeled with {FORWARD, STOP, LEFT, RIGHT} (See load_datum). Defaults to False.
+        recursive (bool, optional): whether subdirectories of the data path should be considered.
+          Yes for data with multiple distributions. Defaults to True.
+        dataformat (str, optional): The format of the 3D data, one of `{HWC, CHW}`. Defaults to "HWC".
+        num_timesteps_to_keep (int, optional): The number of timesteps of the trajectory. Defaults to 4.
+        num_instances ([type], optional): the maximum number of instances in the arff file. Defaults to None.
+
+    Raises:
+        NotImplementedError: [description]
+    """
     npz_files = get_npz_files(dataset_dir, recursive)
     with open(outpath, "w") as arff_file:
       if comments is not None:
@@ -838,12 +872,23 @@ class CARLADataset(Dataset):
         arff_file.write(line)
 
   @classmethod
-  def car_not_moving_counts(cls, dataset_dir: str, eps=0.01):  # 0.001 seems to be a good threshold since standing cars often seem to move around 0.0005
-    if dataset_dir[-1] == "/":
-      dataset_dir = dataset_dir[:-1]
-    dataset_dir, token = os.path.split(dataset_dir)
+  def car_not_moving_counts(cls, episode_path: str, eps:float=0.01) -> List[int]:
+    """Count how many frames in a row the car is not moving in an episode.
+
+    Args:
+        episode_path (str): the episode path
+        eps (float, optional): the distance threshold. If the distance is higher, the car is considered to be moving.
+          0.01 seems to be a good threshold since standing cars often seem to move around 0.0005. Defaults to 0.01.
+
+    Returns:
+        List[int]: an entry means that a car hasn't moved for that many frames. 0 means the car is moving.
+          The sum is the total number of frames a car hasn't moved.
+    """
+    if episode_path[-1] == "/":
+      episode_path = episode_path[:-1]
+    episode_path, token = os.path.split(episode_path)
     
-    episode = Episode(parent_dir=dataset_dir, token=token)
+    episode = Episode(parent_dir=episode_path, token=token)
     # Fetches all `.npz` files from the raw dataset.
     try:
       sequence = episode.fetch()  # list of tokens for frames in order fetched from metadata
@@ -880,7 +925,21 @@ class CARLADataset(Dataset):
       counts.append(counter)
     return counts
       
-def get_observation_line(observation, modalities, round=10):
+def get_observation_line(observation: Mapping[str, np.ndarray], modalities: Sequence[str], round=10) -> str:
+  """Create one line of an arff file for one observation/fram of a dataset.
+  Multidimensional features will be split into a column for each dimension.
+
+  Args:
+      observation (Mapping[str, np.ndarray]): a frame of a dataset, transformed into an arff line
+      modalities (Sequence[str]): the features
+      round (int, optional): the number of decimals in float features. Defaults to 10.
+
+  Raises:
+      NotImplementedError: if a feature is of an unknown type
+
+  Returns:
+      str: the arff line representing the frame
+  """
   values = []
   for key in modalities:
     value = observation[key]    
@@ -901,7 +960,18 @@ def get_observation_line(observation, modalities, round=10):
 
     return ",".join(values)
 
-def get_npz_files(dataset_dir: str, recursive=True):
+def get_npz_files(dataset_dir: str, recursive=True) -> List[str]:
+  """Get a list of the absolute path of all npz files (frames) in a data set.
+  If the dataset is ordered, the list is in that order.
+
+  Args:
+      dataset_dir (str): the root path of the dataset
+      recursive (bool, optional): whether subdirectories should be recursively considered
+        (necessary for datasets consisting of several distributions). Defaults to True.
+
+  Returns:
+      List[str]: the list of absolute paths of npz files
+  """
   local_listdir = os.listdir(dataset_dir)
   global_listdir = [os.path.join(dataset_dir, x) for x in local_listdir]
   npz_files = []
