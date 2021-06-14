@@ -96,6 +96,11 @@ flags.DEFINE_integer(
     default=128,
     help="The dimension of the output of the mobilenet.",
 )
+flags.DEFINE_bool(
+    name="use_checkpoints",
+    default=True,
+    help="Flag whether the dim should load checkpoints of earlier training or not.",
+)
 
 
 def main(argv):
@@ -117,6 +122,7 @@ def main(argv):
   cuda_val_idx = FLAGS.cuda_val_idx
   mobilenet_num_classes = FLAGS.mobilenet_num_classes
   noise_level = 1e-2
+  use_checkpoints = FLAGS.use_checkpoints
 
   val = True
 
@@ -134,6 +140,15 @@ def main(argv):
   # Initializes the model and its optimizer.
   output_shape = [num_timesteps_to_keep, 2]
   model = ImitativeModel(output_shape=output_shape, mobilenet_num_classes=mobilenet_num_classes).to(train_device)
+
+  if use_checkpoints:
+    ckpt_path = os.path.join(output_dir, "ckpts")
+    ckpts = [x for x in os.listdir(ckpt_path) if x.startswith("model-") and x.endswith(".pt")]
+    start_epoch = max(int(x.replace("model-","").replace(".pt","")) for x in ckpts)
+    logging.debug("Loaded state dict. Start at epoch {}".format(start_epoch))
+    state = torch.load(os.path.join(ckpt_path, "model-{}.pt".format(start_epoch)))
+    model.load_state_dict(state)
+
   optimizer = optim.Adam(
       model.parameters(),
       lr=learning_rate,
@@ -331,6 +346,8 @@ def main(argv):
 
   with tqdm.tqdm(range(num_epochs)) as pbar_epoch:
     for epoch in pbar_epoch:
+      if epoch <= start_epoch:
+        continue
       # Trains model on whole training dataset, and writes on `TensorBoard`.
       logging.debug("#"*50+"\ntrain\n"+"#"*50)
       loss_train = train_epoch(model, optimizer, dataloader_train)
