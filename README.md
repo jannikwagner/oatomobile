@@ -146,4 +146,10 @@ If you use OATomobile in your work, please cite the accompanying
 
 ## Modifications to OATomobile
 
-I used OATomobile to generate data for my bachelor thesis and also modified it for that purpose. The scripts I wrote are very basic and not well designed. See ```generate_data.py``` for data generation. See ```train.py``` for training of a DIM model. See ```evaluation.py``` for the evaluation of a trained DIM model. I also modified files of OATomobile such as ```oatomobile.datasets.carla.py```.
+I used OATomobile to generate data for my bachelor thesis and also modified it for that purpose. The scripts I wrote are very basic and not well designed. See ```generate_data.py``` for data generation. See ```train.py``` for training of a DIM model. A model can be trained as follows:
+
+```bash
+python train.py --dataset_dir=data/mydata/processed --output_dir=models/dim/mymodel_d32/ --num_epochs=201 --cuda_train_idx=0 --cuda_val_idx=0 --mobilenet_num_classes=32 --batch_size=512
+```
+
+. See ```evaluation.py``` for the evaluation of a trained DIM model. I also modified files of OATomobile such as ```oatomobile.datasets.carla.py```.
