@@ -68,7 +68,20 @@ action = agent.act(observation)
 
 We have tested OATomobile on Python 3.5.
 
-1.  To install the core libraries (including [CARLA], the backend simulator):
+1. install python
+
+    ```bash
+    # install python
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    chmod 777 Miniconda3-latest-Linux-x86_64.sh
+    ./Miniconda3-latest-Linux-x86_64.sh
+    source ~/.bashrc
+
+    conda create -n py35 python=3.5
+    conda activate py35
+    ```
+
+2. To install the core libraries (including [CARLA], the backend simulator):
 
     ```bash
     # The path to download CARLA 0.9.6.
@@ -83,16 +96,20 @@ We have tested OATomobile on Python 3.5.
 
     # Installs CARLA 0.9.6 Python API.
     easy_install $CARLA_ROOT/PythonAPI/carla/dist/carla-0.9.6-py3.5-linux-x86_64.egg
+
+    # install dependencies
+    pip install -r $PWD/oatomobile/requirements.txt
+    pip install -r $PWD/oatomobile/requirements2.txt
     ```
 
-1.  To install the OATomobile core API:
+3. To install the OATomobile core API:
 
     ```bash
     pip install --upgrade pip setuptools
     pip install oatomobile
     ```
 
-1.  To install dependencies for our [PyTorch]- or [TensorFlow]-based agents:
+4. To install dependencies for our [PyTorch]- or [TensorFlow]-based agents:
 
     ```bash
     pip install oatomobile[torch]
@@ -126,3 +143,7 @@ If you use OATomobile in your work, please cite the accompanying
 [TensorFlow]: https://tensorflow.org
 [PyTorch]: http://pytorch.org
 [gym]: https://github.com/openai/gym
+
+## Modifications to OATomobile
+
+I used OATomobile to generate data for my bachelor thesis and also modified it for that purpose. The scripts I wrote are very basic and not well designed. See ```generate_data.py``` for data generation. See ```train.py``` for training of a DIM model. See ```evaluation.py``` for the evaluation of a trained DIM model. I also modified files of OATomobile such as ```oatomobile.datasets.carla.py```.
