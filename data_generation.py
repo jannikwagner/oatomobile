@@ -1,3 +1,17 @@
+# Copyright 2021 Jannik Wagner. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
 """
 This file offers functions to conduct specific data generation and manipulation tasks with oatomobile
 """
@@ -72,10 +86,7 @@ def download():
     datasets = [raw, examples, processed]
     for dataset in datasets:
         dataset.download_and_prepare(os.path.join(DATA_PATH, "downloaded"))
-
-        # visualize_raw_rgb(path=os.path.join(DATA_PATH, "dists", "Town01HardRainNoon1000"),outpath=os.path.join(DATA_PATH, "vis", "Town01HardRainNoon1000"), end=1000, step=10)
-        # visualize_raw_rgb(path=os.path.join(DATA_PATH, "dists", "Town02HardRainNoon0"),outpath=os.path.join(DATA_PATH, "vis", "Town02HardRainNoon0"), end=1000, step=10)
-
+        
 
 def visualize_raw_rgb(episode_path: str, outpath: str,
                       sensors: Tuple[str] = ("front_camera_rgb",
